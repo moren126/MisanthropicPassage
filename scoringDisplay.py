@@ -5,7 +5,7 @@ from colors import*
 
 currentTime = time.time()
 
-def punctuation(self, objState, startTime):
+def scoringDisplay(self, objState, startTime):
 
     global delay
      

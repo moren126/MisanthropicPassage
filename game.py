@@ -7,7 +7,7 @@ from colors import*
 from button import button
 from listsCreation import createSquares, createPreparedPuzzles, drawNewPuzzles
 from puzzleHandler import PuzzleHandler
-from punctuation import punctuation
+from scoringDisplay import scoringDisplay
 
 
 FPS = 60 #15 #30
@@ -91,7 +91,7 @@ class Game(Parameters):
             Game.flickeringSquares(self, objPuzzleHandler)
             Game.nextPuzzle(self)
             Game.placedPuzzles(self)
-            punctuation(self, objState, startTime)
+            scoringDisplay(self, objState, startTime)
             
             
             ### testowanie
