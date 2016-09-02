@@ -11,9 +11,9 @@ def createRandoms(puzzleNumber):
         results.insert(i, specDistR)
     return results  
     
-def addSpecjalOrNot():
+def addSpecjalOrNot(percentage):
     randomNumber = random.random()    
-    if randomNumber <= 0.4:
+    if randomNumber <= percentage:
         return True
     else:
         return False

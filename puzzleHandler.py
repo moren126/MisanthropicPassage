@@ -172,11 +172,12 @@ class PuzzleHandler(object):
         
         if movingPuzzle['tour'] != -19 and movingPuzzle['tour'] != -10:
             movingPuzzle['tour'] += 1  
+            objParam.PREPAREDPUZZLES.append(movingPuzzle) 
         elif movingPuzzle['tour'] == -10: 
             objParam.DELETEPUZZLE = False
             #print(objParam.DELETEPUZZLE)    
             
-        objParam.PREPAREDPUZZLES.append(movingPuzzle)      
+        #objParam.PREPAREDPUZZLES.append(movingPuzzle)      
 
     def wasItNecessary(self, objParam):
         # sprawdzenie czy omijanie bylo nieuniknione - True gdy brak mozliwosci polozenia kafelka, albo kosz

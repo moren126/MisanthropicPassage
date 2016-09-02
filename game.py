@@ -193,7 +193,7 @@ class Game(Parameters):
 
             if showTime >= (delay - 1):
                 movingPuzzle = self.PREPAREDPUZZLES.pop(0)
-                if movingPuzzle['tour'] != 'irrelevant':
+                if movingPuzzle['tour'] != -19 and movingPuzzle['tour'] != -10:
                     movingPuzzle['tour'] += 1 
                     self.PREPAREDPUZZLES.append(movingPuzzle) 
                 self.SHOWPOSSIBILITIES = False
@@ -329,7 +329,7 @@ class Game(Parameters):
             
             self.JUSTCOUNTER += 1
 
-            if self.PREPAREDPUZZLES[0]['tour'] != 'irrelevant':
+            if self.PREPAREDPUZZLES[0]['tour'] != -19:
                 self.REST -= 1
             
             self.PREPAREDPUZZLES.pop(0)
@@ -374,10 +374,12 @@ class Game(Parameters):
             self.PLACEDPUZZLES.append(objPuzzle)
         
 
-        if self.PREPAREDPUZZLES[0]['tour'] > self.TOUR:
-            #losowanie specjali do dodania do pozostałych puzzli
-            drawNewPuzzles(self)
-            self.TOUR += 1
+        if (self.PREPAREDPUZZLES is not None): 
+            if(self.PREPAREDPUZZLES[0]['tour'] > self.TOUR):
+                #losowanie specjali do dodania do pozostałych puzzli
+                drawNewPuzzles(self)
+                self.TOUR += 1
+                print(self.TOUR)
         
         if self.REST != 0:
             surface = self.PREPAREDPUZZLES[0]['image']

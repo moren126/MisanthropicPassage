@@ -68,7 +68,7 @@ def createSpecialPuzzles(objParam):
     dimage = pygame.image.load('utilities\delete.png') 
     
     # kafelki z koszem
-    for i in range(60):    
+    for i in range(6):    
         objSpecPuzzle = {'pattern': 'nevermind',
                          'colorU': 'nevermind',
                          'colorR': 'nevermind',
@@ -181,16 +181,25 @@ def createPreparedPuzzles(objParam):
 def drawNewPuzzles(objParam):   
     left = objParam.REST
     sthToChoose = createSpecialPuzzles(objParam)
-    myRange = len(sthToChoose)
+    #myRange = len(sthToChoose)
 
-    for i in range(1, left):
-        temp = objParam.PREPAREDPUZZLES.pop(i)
-        
-        if addSpecjalOrNot():
-            pos = random.randrange(0, myRange)
-            temp2 = sthToChoose.pop(pos)
-            objParam.PREPAREDPUZZLES.append(temp2)
-    
-        objParam.PREPAREDPUZZLES.append(temp)   
-    
+    if left > 1:
+        for i in range(1, left):
+            temp = objParam.PREPAREDPUZZLES.pop(i)
+            
+            if addSpecjalOrNot(0.4):
+                #pos = random.randrange(0, myRange)
+                if not bool(sthToChoose): # jesli lista slownikow jt pusta
+                    sthToChoose = createSpecialPuzzles(objParam)
+                temp2 = sthToChoose.pop(0)
+                objParam.PREPAREDPUZZLES.insert(i, temp2) 
+                objParam.PREPAREDPUZZLES.insert(i + 1, temp)
+            else:    
+                objParam.PREPAREDPUZZLES.insert(i, temp)    
+            
+    elif left == 1:
+        if not bool(sthToChoose): # jesli lista slownikow jt pusta
+            sthToChoose = createSpecialPuzzles(objParam)
+        temp2 = sthToChoose.pop(0)
+        objParam.PREPAREDPUZZLES.append(temp2)
     
