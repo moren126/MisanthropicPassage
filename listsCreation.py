@@ -10,6 +10,10 @@ from PIL import Image
 from randoms import createRandoms, addSpecjalOrNot
 
 
+def createIterators(): 
+    iterators = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160] 
+    return iterators
+    
 def createSquares(objParam):
     squares = []
    
@@ -62,12 +66,208 @@ def createOrdinaryPuzzles(objParam):
     
     random.shuffle(puzzles)
     return puzzles   
+
+def prepareSpecialPuzzlesSameColor(iteratorStarter, colorRange, nameFragment, angle, colorUexists, colorRexists, colorDexists, colorLexists):
+    puzzles = []
     
-def createSpecialPuzzles(objParam):
+    if angle == 90:
+        nameFragmentAfter = 'l'
+    elif angle == 180:
+        nameFragmentAfter = 'd'
+    elif angle == 270:    
+        nameFragmentAfter = 'r'   
+
+    for i in range(colorRange):  
+
+        if colorUexists:
+            colorU = i
+        else:
+            colorU = 'neutral'
+            
+        if colorRexists:
+            colorR = i
+        else:
+            colorR = 'neutral'
+            
+        if colorDexists:
+            colorD = i
+        else:
+            colorD = 'neutral'
+            
+        if colorLexists:
+            colorL = i
+        else:
+            colorL = 'neutral'            
+ 
+        pfileName = 'utilities\spec' + str(nameFragment) + 'u0' + str(i) + '.png' 
+        
+        if angle == 0:
+            pimage = pygame.image.load(pfileName)
+        else:
+            pimage0 = Image.open(pfileName)
+            pimage1 = pimage0.rotate(angle)
+            pfileName2 = 'utilities\spec' + str(nameFragment) + str(nameFragmentAfter) + '0' + str(i) + '.png' 
+            pimage1.save(pfileName2)
+            pimage = pygame.image.load(pfileName2)        
+          
+        objSpecPuzzle = {'pattern': iteratorStarter,
+                         'colorU': colorU,
+                         'colorR': colorR,
+                         'colorD': colorD,
+                         'colorL': colorL,
+                         'tour': -19,
+                         'image': pimage}
+        puzzles.append(objSpecPuzzle)
+        
+        iteratorStarter -= 1
+        
+    return puzzles        
+
+def prepareSpecialPuzzlesDiff3Colors(iteratorStarter, colorRange, nameFragment, angle):
+
+    #t = prepareSpecialPuzzlesDiff3Colorsss(patternIterator, colorRange, nameFragment, angle)
+    #return t
+
+    puzzles = []
+    
+    if angle == 90:
+        nameFragmentAfter = 'l'
+    elif angle == 180:
+        nameFragmentAfter = 'd'
+    elif angle == 270:    
+        nameFragmentAfter = 'r'   
+
+    for i in range(colorRange):  
+
+        j = i + 1
+        k = i + 2
+        
+        if i == 4: #colorRange - 2:
+            k = 0 #(colorRange - 1) % (colorRange - 1)     
+        elif i == 5: #colorRange - 1:  
+            j = 0 #(colorRange - 1) % (colorRange - 1)     
+            k = 1 #(colorRange - 1) % (colorRange - 2)            
+    
+        if angle == 0:
+            colorU = 'neutral'
+            colorR = j
+            colorD = k
+            colorL = i             
+
+        elif angle == 90:
+            colorU = j
+            colorR = k
+            colorD = i
+            colorL = 'neutral'                
+            
+        elif angle == 180:
+            colorU = k
+            colorR = i
+            colorD = 'neutral'
+            colorL = j  
+   
+        elif angle == 270:
+            colorU = i
+            colorR = 'neutral'
+            colorD = j
+            colorL = k              
+         
+ 
+        pfileName = 'utilities\spec' + str(nameFragment) + 'u0' + str(i) + '.png' 
+        
+        if angle == 0:
+            pimage = pygame.image.load(pfileName)
+        else:
+            pimage0 = Image.open(pfileName)
+            pimage1 = pimage0.rotate(angle)
+            pfileName2 = 'utilities\spec' + str(nameFragment) + str(nameFragmentAfter) + '0' + str(i) + '.png' 
+            pimage1.save(pfileName2)
+            pimage = pygame.image.load(pfileName2)        
+          
+        objSpecPuzzle = {'pattern': iteratorStarter,
+                         'colorU': colorU,
+                         'colorR': colorR,
+                         'colorD': colorD,
+                         'colorL': colorL,
+                         'tour': -19,
+                         'image': pimage}
+        puzzles.append(objSpecPuzzle)
+        
+        iteratorStarter -= 1
+  
+    return puzzles 
+
+
+def prepareSpecialPuzzlesDiff2Colors(iteratorStarter, colorRange, nameFragment, angle):
+    puzzles = []
+    
+    if angle == 90:
+        nameFragmentAfter = 'sl'
+    elif angle == 180:
+        nameFragmentAfter = 'sd'
+    elif angle == 270:    
+        nameFragmentAfter = 'sr'   
+
+    for i in range(colorRange):  
+
+        j = i + 1
+
+        if i == 5: #colorRange - 1:  
+            j = 0 #(colorRange - 1) % (colorRange - 1)      
+    
+        if angle == 0:
+            colorU = 'neutral'
+            colorR = j
+            colorD = 'neutral'
+            colorL = i             
+            
+        elif angle == 90:
+            colorU = j
+            colorR = 'neutral'
+            colorD = i
+            colorL = 'neutral'  
+            
+        elif angle == 180:
+            colorU = 'neutral'
+            colorR = i
+            colorD = 'neutral'
+            colorL = j  
+            
+        elif angle == 270:
+            colorU = i
+            colorR = 'neutral'
+            colorD = j
+            colorL = 'neutral'             
+ 
+        pfileName = 'utilities\spec' + str(nameFragment) + 's0' + str(i) + '.png' 
+        
+        if angle == 0:
+            pimage = pygame.image.load(pfileName)
+        else:
+            pimage0 = Image.open(pfileName)
+            pimage1 = pimage0.rotate(angle)
+            pfileName2 = 'utilities\spec' + str(nameFragment) + str(nameFragmentAfter) + '0' + str(i) + '.png' 
+            pimage1.save(pfileName2)
+            pimage = pygame.image.load(pfileName2)        
+          
+        objSpecPuzzle = {'pattern': iteratorStarter,
+                         'colorU': colorU,
+                         'colorR': colorR,
+                         'colorD': colorD,
+                         'colorL': colorL,
+                         'tour': -19,
+                         'image': pimage}
+        puzzles.append(objSpecPuzzle)
+        
+        iteratorStarter -= 1
+        
+    return puzzles 
+    
+def createSpecialPuzzles(objParam, iteratorStarters):
     specialPuzzles = []
     dimage = pygame.image.load('utilities\delete.png') 
     
-    # kafelki z koszem
+    ### kafelki z koszem
     for i in range(6):    
         objSpecPuzzle = {'pattern': 'nevermind',
                          'colorU': 'nevermind',
@@ -77,68 +277,84 @@ def createSpecialPuzzles(objParam):
                          'tour': -10,
                          'image': dimage}
         specialPuzzles.append(objSpecPuzzle) 
- 
- 
-    #2 pola obok - 1/4
-    for i in range(6):    
-        pimage = pygame.image.load( ('utilities\spec2u0%s.png' % i) )
-          
-        objSpecPuzzle = {'pattern': i,
-                         'colorU': 'neutral',
-                         'colorR': 'neutral',
-                         'colorD': i,
-                         'colorL': i,
-                         'tour': -19,
-                         'image': pimage}
-        specialPuzzles.append(objSpecPuzzle) 
         
-    #2 pola obok - 2/4
-    for i in range(6):    
-        pimage = Image.open( ('utilities\spec2u0%s.png' % i) )
-        pimage2 = pimage.rotate(90)
-        pimage2.save( ('utilities\spec2l0%s.png' % i) )
-        puzzleImage = pygame.image.load( ('utilities\spec2l0%s.png' % i) )
-            
-        objSpecPuzzle = {'pattern': i,
-                         'colorU': 'neutral',
-                         'colorR': i,
-                         'colorD': i,
-                         'colorL': 'neutral',
-                         'tour': -19,
-                         'image': puzzleImage}                 
-        specialPuzzles.append(objSpecPuzzle)         
+    # 1. 1 pole - 1/4
+    onecolor1 = prepareSpecialPuzzlesSameColor(iteratorStarters[0], 6, 3, 0, False, False, True, False)
+    specialPuzzles.extend(onecolor1)
+        
+    # 2. 1 pole - 2/4 - obrot w lewo 90
+    onecolor2 = prepareSpecialPuzzlesSameColor(iteratorStarters[1], 6, 3, 90, False, True, False, False)
+    specialPuzzles.extend(onecolor2)    
+       
+    # 3. 1 pole - 3/4 - obrot w lewo 180
+    onecolor3 = prepareSpecialPuzzlesSameColor(iteratorStarters[2], 6, 3, 180, True, False, False, False)
+    specialPuzzles.extend(onecolor3)      
     
-    #2 pola obok - 3/4
-    for i in range(6):    
-        pimage = Image.open( ('utilities\spec2u0%s.png' % i) )
-        pimage2 = pimage.rotate(180)
-        pimage2.save( ('utilities\spec2d0%s.png' % i) )
-        puzzleImage = pygame.image.load( ('utilities\spec2d0%s.png' % i) )
-            
-        objSpecPuzzle = {'pattern': i,
-                         'colorU': i,
-                         'colorR': i,
-                         'colorD': 'neutral',
-                         'colorL': 'neutral',
-                         'tour': -19,
-                         'image': puzzleImage}                 
-        specialPuzzles.append(objSpecPuzzle)      
+    # 4. 1 pole - 4/4 - obrot w lewo 270
+    onecolor4 = prepareSpecialPuzzlesSameColor(iteratorStarters[3], 6, 3, 270, False, False, False, True)
+    specialPuzzles.extend(onecolor4)  
+    
+ 
+    # 5. 2 pola obok - 1/4
+    twocolors1 = prepareSpecialPuzzlesSameColor(iteratorStarters[4], 6, 2, 0, False, False, True, True)
+    specialPuzzles.extend(twocolors1)
+        
+    # 6. 2 pola obok - 2/4
+    twocolors2 = prepareSpecialPuzzlesSameColor(iteratorStarters[5], 6, 2, 90, False, True, True, False)
+    specialPuzzles.extend(twocolors2)    
+       
+    # 6. 2 pola obok - 3/4
+    twocolors3 = prepareSpecialPuzzlesSameColor(iteratorStarters[6], 6, 2, 180, True, True, False, False)
+    specialPuzzles.extend(twocolors3)      
+    
+    # 8. 2 pola obok - 4/4
+    twocolors4 = prepareSpecialPuzzlesSameColor(iteratorStarters[7], 6, 2, 270, True, False, False, True)
+    specialPuzzles.extend(twocolors4)     
 
-    #2 pola obok - 4/4
-    for i in range(6):    
-        pimage = Image.open( ('utilities\spec2u0%s.png' % i) )
-        pimage2 = pimage.rotate(270)
-        pimage2.save( ('utilities\spec2r0%s.png' % i) )
-        puzzleImage = pygame.image.load( ('utilities\spec2r0%s.png' % i) )
-            
-        objSpecPuzzle = {'pattern': i,
-                         'colorU': i,
-                         'colorR': 'neutral',
-                         'colorD': 'neutral',
-                         'colorL': i,
-                         'tour': -19,
-                         'image': puzzleImage}                 
-        specialPuzzles.append(objSpecPuzzle)          
+    
+    # 9. 3 rozne pola obok - 1/4
+    threecolors1 = prepareSpecialPuzzlesDiff3Colors(iteratorStarters[8], 6, 1, 0)   
+    specialPuzzles.extend(threecolors1)
+    
+    # 10. 3 rozne pola obok - 2/4
+    threecolors2 = prepareSpecialPuzzlesDiff3Colors(iteratorStarters[9], 6, 1, 90)   
+    specialPuzzles.extend(threecolors2) 
+
+    # 11. 3 rozne pola obok - 3/4
+    threecolors3 = prepareSpecialPuzzlesDiff3Colors(iteratorStarters[10], 6, 1, 180)   
+    specialPuzzles.extend(threecolors3)     
+    
+    # 12. 3 rozne pola obok - 4/4
+    threecolors4 = prepareSpecialPuzzlesDiff3Colors(iteratorStarters[11], 6, 1, 270)   
+    specialPuzzles.extend(threecolors4) 
+    
+    
+    # 13. 2 pola naprzeciw - 1/4
+    twocolors5 = prepareSpecialPuzzlesDiff2Colors(iteratorStarters[12], 6, 2, 0)
+    specialPuzzles.extend(twocolors5)  
+
+    # 14. 2 pola naprzeciw - 2/4
+    twocolors6 = prepareSpecialPuzzlesDiff2Colors(iteratorStarters[13], 6, 2, 90)
+    specialPuzzles.extend(twocolors6)    
+
+    # 15. 2 pola naprzeciw - 3/4
+    twocolors7 = prepareSpecialPuzzlesDiff2Colors(iteratorStarters[14], 6, 2, 180)
+    specialPuzzles.extend(twocolors7) 
+
+    # 16. 2 pola naprzeciw - 4/4
+    twocolors8 = prepareSpecialPuzzlesDiff2Colors(iteratorStarters[15], 6, 2, 270)
+    specialPuzzles.extend(twocolors8)      
+
+    ###debug    
+    #plik = open('puzle.txt', 'w')
+    ###    
+    #for i in specialPuzzles:
+        ###            
+        #plik.write(str(i) + '\n')            
+        ### 
+    ###
+    #plik.close()
+    ###        
   
     random.shuffle(specialPuzzles)
     return specialPuzzles  
@@ -147,7 +363,8 @@ def createSpecialPuzzles(objParam):
 def createPreparedPuzzles(objParam):   
     mixed = []
     ordinary = createOrdinaryPuzzles(objParam) #objParam.REST tu jt 
-    special = createSpecialPuzzles(objParam)
+    iteratorStarters = createIterators()
+    special = createSpecialPuzzles(objParam, iteratorStarters)
     
     randoms = createRandoms(72)
     k = 0
@@ -155,7 +372,7 @@ def createPreparedPuzzles(objParam):
     ordinaryLength = len(ordinary)
 
     ###debug    
-    #plik = open('puzle.txt', 'w')
+    plik = open('puzle.txt', 'w')
     ###
     
     for i in range(ordinaryLength):
@@ -167,30 +384,37 @@ def createPreparedPuzzles(objParam):
                 mixed.append(temp2)            
                 k += 1  
                 ###            
-                #plik.write(str(temp2) + '\n')            
+                plik.write(str(temp2) + '\n')            
                 ### 
         mixed.append(temp)   
         ###            
-        #plik.write(str(temp) + '\n')            
+        plik.write(str(temp) + '\n')            
         ###         
     ###
-    #plik.close()
+    plik.close()
     ###    
     return mixed
     
-def drawNewPuzzles(objParam):   
+def drawNewPuzzles(objParam, iteratorJump):   
     left = objParam.REST
-    sthToChoose = createSpecialPuzzles(objParam)
-    #myRange = len(sthToChoose)
+    
+    iteratorStarters = createIterators()
+    newIteratorStarters = [i+iteratorJump for i in iteratorStarters]
+    #print(newIteratorStarters)
+    sthToChoose = createSpecialPuzzles(objParam, newIteratorStarters)
+    
 
+    
     if left > 1:
         for i in range(1, left):
             temp = objParam.PREPAREDPUZZLES.pop(i)
             
-            if addSpecjalOrNot(0.4):
-                #pos = random.randrange(0, myRange)
+            if addSpecjalOrNot(0.5):
                 if not bool(sthToChoose): # jesli lista slownikow jt pusta
-                    sthToChoose = createSpecialPuzzles(objParam)
+                    [i+iteratorJump for i in newIteratorStarters]
+                    print(newIteratorStarters)   
+                    sthToChoose = createSpecialPuzzles(objParam, newIteratorStarters)
+                    drawIterator += iteratorJump
                 temp2 = sthToChoose.pop(0)
                 objParam.PREPAREDPUZZLES.insert(i, temp2) 
                 objParam.PREPAREDPUZZLES.insert(i + 1, temp)
@@ -199,7 +423,7 @@ def drawNewPuzzles(objParam):
             
     elif left == 1:
         if not bool(sthToChoose): # jesli lista slownikow jt pusta
-            sthToChoose = createSpecialPuzzles(objParam)
+            sthToChoose = createSpecialPuzzles(objParam, newIteratorStarters)
         temp2 = sthToChoose.pop(0)
         objParam.PREPAREDPUZZLES.append(temp2)
     

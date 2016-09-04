@@ -2,12 +2,11 @@ import pygame, time, sys, random
 from pygame.locals import* # pygame evemty w tym są np QUIT
 
 from parameters import Parameters
-#from states import GameStates
 from colors import*
 from button import button
 from listsCreation import createSquares, createPreparedPuzzles, drawNewPuzzles
 from puzzleHandler import PuzzleHandler
-from scoringDisplay import scoringDisplay
+from scoringDisplay import Scoring
 
 
 FPS = 60 #15 #30
@@ -46,9 +45,6 @@ class Game(Parameters):
         self.NEXTX = self.WIDTH - self.SQUARESIZE - ((self.BOARDX - self.SQUARESIZE) / 2)
         self.NEXTY = (self.HEIGHT - self.SQUARESIZE) / 2
         
-        # parametry na nowa rozgrywke (+ self.STARTPUZZLEX/Y z powyzej)
-        self.SCORE = 0
-        self.FIRSTTIMEENTRANCE = True
         
         self.PAUSE = False
         self.PAUSEDTIME = 0
@@ -64,19 +60,15 @@ class Game(Parameters):
         
         self.JUSTCOUNTER = 0
         self.TOUR = 0
+
+        self.drawIterator = 100
         
-        
-  
+    # obsluga rozgrywki
     def runGame(self, objState):
     
-        CLOCK = pygame.time.Clock()
-        
+        CLOCK = pygame.time.Clock()    
         objPuzzleHandler = PuzzleHandler(self.COLUMNS, self.ROWS, self.STARTPUZZLEX, self.STARTPUZZLEY)
-
-        ### audio 
-        #pygame.mixer.music.load('utilities\suspense.mp3')
-        #pygame.mixer.music.play(-1)
-        ###
+        objScore = Scoring()
                     
         while True:      
             self.displaySurface.fill(GROUNDCOLOR)            
@@ -85,15 +77,16 @@ class Game(Parameters):
 
             startTime = time.time()
        
+            # jesli nowa gra - ustawienie parametrow na nowa rozgrywke
             if self.NEWGAME:
-                Game.setNewGame(self, objState, objPuzzleHandler)
+                Game.setNewGame(self, objState, objPuzzleHandler, objScore)
 
             Game.flickeringSquares(self, objPuzzleHandler)
             Game.nextPuzzle(self)
             Game.placedPuzzles(self)
-            scoringDisplay(self, objState, startTime)
+            objScore.scoringDisplay(self, objState, startTime)
             
-            
+            """
             ### testowanie
             if DEBUGMODE:
                 # wyswietlanie wszystkich pol ze stanem 'ready'
@@ -106,7 +99,7 @@ class Game(Parameters):
                 if len(temp) != 0:
                     for i in temp:
                         pygame.draw.rect(self.displaySurface, GREEN, (i['startX'], i['startY'], self.SQUARESIZE, self.SQUARESIZE))          
-            
+            """
             
             # rysowanie mozliwych ruchow przez ~2s          
             if self.SHOWPOSSIBILITIES:
@@ -118,6 +111,7 @@ class Game(Parameters):
                 if event.type == QUIT:
                     pygame.quit()
                     sys.exit()
+                    
                 elif event.type == KEYUP:
                     if event.key == K_ESCAPE:
                         pygame.quit()
@@ -128,11 +122,6 @@ class Game(Parameters):
                     if event.key == K_p:
                         self.PAUSE = True
                         self.PAUSEDTIME += Game.paused(self)
-                    ### 
-                    elif self.WIN and event.key == K_m:
-                        objState.setState('WelcomeMenu')
-                        return                        
-                    ### 
 
                 # wlasny event ktory daje 'True' jak klikniety button 'Back to menu'     
                 elif event.type == BACK:
@@ -141,7 +130,7 @@ class Game(Parameters):
                     
                 # klikniecie PPM -> polozenie lub usuniecie puzla
                 elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.CLICKPUZZLE):
-                    Game.clickSquare(self, objPuzzleHandler)
+                    Game.clickSquare(self, objPuzzleHandler, objScore)
                     
                 # klikniecie LPM -> omijanie puzzla 
                 elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 3) and self.CLICKPUZZLE:
@@ -162,7 +151,8 @@ class Game(Parameters):
             pygame.display.update()
             CLOCK.tick(FPS)
     
-    def setNewGame(self, objState, objPuzzleHandler):
+    # parametry na nowa rozgrywke
+    def setNewGame(self, objState, objPuzzleHandler, objScore):
         self.STARTPUZZLEX = random.randrange(1, self.COLUMNS)
         self.STARTPUZZLEY = random.randrange(1, self.ROWS) 
                 
@@ -171,23 +161,25 @@ class Game(Parameters):
         self.PREPAREDPUZZLES = createPreparedPuzzles(self)
                     
         #zerowanie wyniku, czasu
-        self.SCORE = 0
-        self.FIRSTTIMEENTRANCE = True
+        objScore.setScoring('noCumulation')
+
         startTime = time.time()
         self.PAUSEDTIME = 0       
         objPuzzleHandler = PuzzleHandler(self.COLUMNS, self.ROWS, self.STARTPUZZLEX, self.STARTPUZZLEY) 
         self.JUSTCOUNTER = 0   
         self.TOUR = 0         
         objState.setCreditFromDiff()
+        self.CLICKPUZZLE = True
+        self.WIN = False
         self.NEWGAME = False
 
-    # po ominieciu kafelka ktory mozna bylo polozyc    
+    # wyswietlenie mozliwosci po ominieciu kafelka ktory mozna bylo polozyc    
     def showPossibleMoves(self, delay, STARTSHOW):
         self.CLICKPUZZLE = False
         for i in self.POSSIBILITIES:     
             pygame.draw.rect(self.displaySurface, BRIGHTRED, (i['startX'], i['startY'], self.SQUARESIZE, self.SQUARESIZE))
                     
-            #odliczanie timera
+            #odliczanie czasu
             stopShow = time.time()
             showTime = stopShow - STARTSHOW
 
@@ -200,6 +192,7 @@ class Game(Parameters):
                 self.POSSIBILITIES[:] = []
                 self.CLICKPUZZLE = True        
     
+    # zwraca najechane kursorem pole i tryb (mozliwe do polozenia, mozliwe do usuniecia)  
     def getHighlighted(self, objPuzzleHandler):
         global posX, posY 
         highlighted = {}
@@ -210,10 +203,10 @@ class Game(Parameters):
         mouseY = mousePosition[1]        
         click = pygame.mouse.get_pressed()
         
-        #podswietlanie pol tylko na obszarze planszy
+        # podswietlanie pol tylko na obszarze planszy
         if self.STARTX <= mouseX < self.STARTX + self.BOARDWITH and self.STARTY <= mouseY < self.STARTY + self.BOARDHEIGHT:
         
-            #pobieranie pozycji w kolumnach i wierszach 
+            # pobieranie pozycji kursora w kolumnach i wierszach 
             for x in range(self.COLUMNS):
                 if mouseX <= (x * 100 + self.STARTX + self.SQUARESIZE):
                     posX = x + 1
@@ -223,7 +216,7 @@ class Game(Parameters):
                     posY = y + 1                
                     break
             
-            #odszukanie odpowiadajacych pozycji w pikselach dla kazdego najechanego pola
+            # odszukanie odpowiadajacych pozycji w pikselach dla kazdego najechanego pola
             for i in self.SQUARES:
             
                 if i['x'] == posX and i['y'] == posY:
@@ -240,68 +233,38 @@ class Game(Parameters):
 
         return (highlighted, mode)
     
-    def flickeringSquares(self, objPuzzleHandler):
-    
-        global posX, posY, highlighted 
-        mode = 0
-       
-        mousePosition = pygame.mouse.get_pos()
-        mouseX = mousePosition[0]
-        mouseY = mousePosition[1]        
-        click = pygame.mouse.get_pressed()
+    # podswietlanie pol najechanych kursorem, ktore nie sa zajete
+    def flickeringSquares(self, objPuzzleHandler):   
+        result = Game.getHighlighted(self, objPuzzleHandler)
+        highlighted = result[0]
+        mode = result[1]
         
-        #podswietlanie pol tylko na obszarze planszy
-        if self.STARTX <= mouseX < self.STARTX + self.BOARDWITH and self.STARTY <= mouseY < self.STARTY + self.BOARDHEIGHT:
-        
-            #pobieranie pozycji w kolumnach i wierszach 
-            for x in range(self.COLUMNS):
-                if mouseX <= (x * 100 + self.STARTX + self.SQUARESIZE):
-                    posX = x + 1
-                    break
-            for y in range(self.ROWS):
-                if mouseY <= (y * 100 + self.STARTY + self.SQUARESIZE):
-                    posY = y + 1                
-                    break
-            
-            #odszukanie odpowiadajacych pozycji w pikselach dla kazdego najechanego pola
-            for i in self.SQUARES:
-            
-                if i['x'] == posX and i['y'] == posY:
-                
-                    # tylko niezajete pola moga sie podswietlac gdy kladziemy kafelki
-                    if i['sState'] != 'occupied':
-                        highlighted = i
-                        mode = 1
-                        
-                    # tylko zajete pola moga sie podswietlac gdy usuwamy   
-                    elif i['sState'] == 'occupied': 
-                        highlighted = i
-                        mode = 2
-
         if mode == 1:
             if (highlighted is not None and self.PREPAREDPUZZLES[0]['tour'] != -10):  
                 pygame.draw.rect(self.displaySurface, YELLOW, (highlighted['startX'], highlighted['startY'], self.SQUARESIZE, self.SQUARESIZE))
-            
-    def clickSquare(self, objPuzzleHandler):
-    
-        highlighted = Game.getHighlighted(self, objPuzzleHandler)
+     
+    # obsluga klikniecia pola i usuwania polozonego kafelka
+    def clickSquare(self, objPuzzleHandler, objScore):
+        result = Game.getHighlighted(self, objPuzzleHandler)
+        highlighted = result[0]
+        mode = result[1]        
 
         # tryb kladzenia kafelka
-        if highlighted[1] == 1 and not self.DELETEPUZZLE:
-            if highlighted[0]['sState'] == 'ready':
-                if objPuzzleHandler.isMovePossible(self, highlighted[0]):
-                    highlighted[0]['sState'] = 'occupied'
-                    Game.placePuzzle(self, highlighted[0]['x'], highlighted[0]['y'], highlighted[0]['startX'], highlighted[0]['startY'])
-            elif highlighted[0]['sState'] == 'unoccupied':   
+        if mode == 1 and not self.DELETEPUZZLE:
+            if highlighted['sState'] == 'ready':
+                if objPuzzleHandler.isMovePossible(self, objScore, highlighted):
+                    highlighted['sState'] = 'occupied'
+                    Game.placePuzzle(self, highlighted['x'], highlighted['y'], highlighted['startX'], highlighted['startY'])
+            elif highlighted['sState'] == 'unoccupied':   
                 #komunikat o niedozowlonym ruchu
                 pass
                 
         # tryb usuwania kafelka        
-        elif highlighted[1] == 2 and self.DELETEPUZZLE:
-            if highlighted[0]['sState'] == 'occupied':
-                objPuzzleHandler.deletePuzzle(self, highlighted[0]['x'], highlighted[0]['y']) 
+        elif mode == 2 and self.DELETEPUZZLE:
+            if highlighted['sState'] == 'occupied':
+                objPuzzleHandler.deletePuzzle(self, highlighted['x'], highlighted['y']) 
                                        
-                  
+    # dolaczenie kładzionego kafelka do listy polozonych kafelkow              
     def placePuzzle(self, posX, posY, positionX, positionY):
 
         for i in self.SQUARES:
@@ -327,37 +290,43 @@ class Game(Parameters):
                             }        
             self.PLACEDPUZZLES.append(objPuzzle)
             
+            # aby kazdy obiekt mial inny indeks, potrzebne w PuzzleHandler
             self.JUSTCOUNTER += 1
 
+            # jesli kladziony kafelek nie byl kafelkiem specjalnym - zmniejszenie liczby kafelkow do polozenia
             if self.PREPAREDPUZZLES[0]['tour'] != -19:
                 self.REST -= 1
             
             self.PREPAREDPUZZLES.pop(0)
 
+        # KONIEC GRY    
         if self.REST == 0:        
+            self.CLICKPUZZLE = False
             self.WIN = True  
             ###
             print('Game.placePuzzle linia ~341: WIN!')
             ###
-            
+    
+    # wyswietlenie polozonych kalefkow    
     def placedPuzzles(self):
         for i in self.PLACEDPUZZLES:
             surface = i['pImage']
             self.displaySurface.blit(surface, (i['startX'], i['startY'])) 
 
+    # wyswietlenie kolejnego kafelka po prawej stronie ekranu        
     def nextPuzzle(self):  
-        #tlo do Next Puzzle
+        # tlo do 'Next Puzzle'
         back = pygame.image.load('utilities\pback.png')
         self.displaySurface.blit(back, (self.NEXTX - 25, self.NEXTY - 25)) 
         
-        #napis 'Next puzzle'
+        # napis 'Next puzzle'
         font = pygame.font.Font(self.FONTNAME, 30)    
         textSurf = font.render('Next puzzle', True, WHITE)
         textRect = textSurf.get_rect()
         textRect.center = ( self.NEXTX + 50, self.NEXTY - 50 )
         self.displaySurface.blit(textSurf, textRect)    
                 
-        #pierwszy puzzel
+        # pierwszy polozony kafelek
         if len(self.PLACEDPUZZLES) == 0:
             startImage = pygame.image.load('utilities\start.png')
             objPuzzle = {   'index': 1519,
@@ -373,13 +342,15 @@ class Game(Parameters):
                             'pColorL': 'neutral',}        
             self.PLACEDPUZZLES.append(objPuzzle)
         
-
+        # losowanie kafelkow specjalnych do dodania do pozostałych do polozenia, gdy te sa w kolejnym obiegu
         if (self.PREPAREDPUZZLES is not None): 
             if(self.PREPAREDPUZZLES[0]['tour'] > self.TOUR):
-                #losowanie specjali do dodania do pozostałych puzzli
-                drawNewPuzzles(self)
+                drawNewPuzzles(self, self.drawIterator)
                 self.TOUR += 1
-                print(self.TOUR)
+                self.drawIterator += 100
+                ###
+                print('Tura' + str(self.TOUR))
+                ###
         
         if self.REST != 0:
             surface = self.PREPAREDPUZZLES[0]['image']
@@ -387,28 +358,26 @@ class Game(Parameters):
             if self.PREPAREDPUZZLES[0]['tour'] == -10:
                 self.DELETEPUZZLE = True         
             
-        else: #wyswietlenie konca puzli
+        else: # wyswietlenie konca puzli
             surface = pygame.image.load('utilities\end.png')
             self.displaySurface.blit(surface, (self.NEXTX, self.NEXTY)) 
 
-
+    # napis 'Press p to pause'
     def pauseText(self):
-        #napis 'Press p to pause'
         font = pygame.font.Font(self.FONTNAME, 26)    
         textSurf = font.render('Press \'p\' to pause', True, WHITE)
         textRect = textSurf.get_rect()
         textRect.center = ( self.NEXTX + 50, self.HEIGHT - self.BOARDY - 13 )
         self.displaySurface.blit(textSurf, textRect)      
-               
+    
+    # odblokowanie pauzy    
     def unpause(self):
-        #pygame.mixer.music.unpause()
         self.PAUSE = False
         stopPause = time.time()
         return stopPause
     
-    def paused(self): #dziala, ale poprawic
-        #pygame.mixer.music.pause()
-
+    # obsluga pauzy
+    def paused(self):
         startPause = time.time()
         
         while self.PAUSE:
@@ -419,10 +388,9 @@ class Game(Parameters):
                     if event.key == K_p:
                         stopPause = Game.unpause(self) 
                         pauseTime = stopPause - startPause
-                        return pauseTime
-                        #print(time.strftime('%H:%M:%S', time.gmtime(pauseTime)))    
+                        return pauseTime  
                         
-            #kliknij p by kontynuowac
+            # napis 'Press p to continue'
             w = 700 
             h = 70
             pygame.draw.rect(self.displaySurface, RED, (self.HALFWIDTH - w/2, self.HALFHEIGHT - h, w, h))
@@ -438,37 +406,29 @@ class Game(Parameters):
             self.displaySurface.blit(textSurfButton, textRectButton)    
             
             pygame.display.update()
-            #clock.tick(15)               
-
-    # okazja do pocwiczenia nadpisania f-cji z WelcomeScreen bottonAction        
+               
+    ### okazja do pocwiczenia nadpisania f-cji z WelcomeScreen bottonAction 
+    # obsluga przyciskow obecnych w trakcie rozgrywki
     def buttonGameAction(self, msg, objState):
-
         if msg == 'New Game':      
             self.NEWGAME = True  
 
         elif msg == 'Back to menu':
-            #print('Back to menu')
             event = pygame.event.Event(BACK)
             pygame.event.post(event)
                         
         elif msg == 'Quit':
             pygame.quit()
             quit()
-                        
- 
-            
-            
+                                   
             
 """
-
-            
             # obsługa zdarzeń
             for event in pygame.event.get():
                 if event.type == QUIT:
                     Game.terminate()
 
                 elif event.type == KEYDOWN:
-
                     #
                     elif event.key == K_p:
                         PAUSE = True
@@ -476,70 +436,11 @@ class Game(Parameters):
                     #
                     elif winMode and event.key == K_m:
                         return
-
+                        
                 elif event.type == KEYUP:
-
 
                     elif event.key == K_ESCAPE:
                         Game.terminate()
-
-            if not gameOverMode:
-                # ruszanie gracza w odpowiednim kierunku
-                if moveLeft:
-                    playerObj['x'] -= windowParameters.MOVERATE
-                if moveRight:
-                    playerObj['x'] += windowParameters.MOVERATE
-                if moveUp:
-                    playerObj['y'] -= windowParameters.MOVERATE
-                if moveDown:
-                    playerObj['y'] += windowParameters.MOVERATE
-
-                if (moveLeft or moveRight or moveUp or moveDown) or playerObj['bounce'] != 0:
-                    playerObj['bounce'] += 1
-
-                if playerObj['bounce'] > windowParameters.BOUNCERATE:
-                    playerObj['bounce'] = 0
-
-                # sprawdzanie kolizji z wrogimi kapibarami
-                for i in range(len(enemyObjs)-1, -1, -1):
-                    enObj = enemyObjs[i]
-                    if 'rect' in enObj and playerObj['rect'].colliderect(enObj['rect']):
-                    
-                        # doszło do kolizji
-                        if enObj['width'] * enObj['height'] <= playerObj['size']**2:
-                            # gracz jt większy i zjada kapibarę
-                            eatens += 1
-                            playerObj['size'] += int( (enObj['width'] * enObj['height'])**0.2 ) + 1
-                            del enemyObjs[i]
-
-                            if playerObj['facing'] == LEFT:
-                                playerObj['surface'] = pygame.transform.scale(L_CAP_IMG, (playerObj['size'], playerObj['size']))
-                            if playerObj['facing'] == RIGHT:
-                                playerObj['surface'] = pygame.transform.scale(R_CAP_IMG, (playerObj['size'], playerObj['size']))
-
-                            if playerObj['size'] > windowParameters.WINSIZE:
-                                winMode = True
-
-                        elif not invulnerableMode:
-                            # gracz jt mniejszy i traci zdrowie
-                            injured = pygame.mixer.Sound('capybara_barks_mono.wav')
-                            injured.play()
-                            invulnerableMode = True
-                            invulnerableStartTime = time.time()
-                            playerObj['health'] -= 1
-                            if playerObj['health'] == 0:
-                                gameOverMode = True
-                                gameOverStartTime = time.time()
-            else:
-                # koniec gry
-                w = 300 
-                h = 130
-                pygame.draw.rect(windowParameters.displaySurface, windowParameters.RED, (windowParameters.HALFWIDTH - w/2, windowParameters.HALFHEIGHT - h/2, w, h))
-                
-                windowParameters.displaySurface.blit(gameOverSurf, gameOverRect)
-                pygame.mixer.music.fadeout(1000)
-                if time.time() - gameOverStartTime > GAMEOVERTIME:
-                    return
 
             # sprawdzenie czy gracz wygrał
             if winMode:
@@ -550,37 +451,7 @@ class Game(Parameters):
 
             pygame.display.update()
             FPSCLOCK.tick(FPS)
-    
-    def unpause():
-        global PAUSE
-        pygame.mixer.music.unpause()
-        PAUSE = False
-    
-    def paused(self):
-        pygame.mixer.music.pause()
-
-        while PAUSE:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    Game.terminate()
-                elif event.type == KEYDOWN:
-                    if event.key == K_p:
-                        Game.unpause()   
-                        
-            #kliknij p by kontynuowac
-            w = 300 
-            h = 50
-            pygame.draw.rect(self.displaySurface, self.RED, (self.HALFWIDTH - w/2, self.HALFHEIGHT - h, w, h))
-
-            fontButton = pygame.font.Font('Kenzo Regular Italic.otf', 30)    
-            textSurfButton = fontButton.render('Click \'p\' to continue', True, self.WHITE)
-            textRectButton = textSurfButton.get_rect()
-            textRectButton.center = (self.HALFWIDTH, self.HALFHEIGHT - 0.5*h)
-            self.displaySurface.blit(textSurfButton, textRectButton)    
-            
-            pygame.display.update()
-            #clock.tick(15)   
-            
+          
     def terminate():
         pygame.quit()
         sys.exit()

@@ -2,7 +2,7 @@ import random
 
 def createRandoms(puzzleNumber):
     results = []
-    specNumber = int(0.2 * puzzleNumber)
+    specNumber = int(0.1 * puzzleNumber)
     specDist = int(puzzleNumber / specNumber)
     specDistR = 0
             

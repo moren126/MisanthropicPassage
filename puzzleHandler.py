@@ -244,7 +244,7 @@ class PuzzleHandler(object):
         else:
             return True
         
-    def isMovePossible(self, objParam, puzzle):
+    def isMovePossible(self, objParam, objScore, puzzle):
         # sprawdzenie czy ruch jt mozliwy, jesli tak obliczane sa tez punkty za polozenie kafelka
         L = R = U = D = True 
         left = right = up = down = 0
@@ -302,19 +302,19 @@ class PuzzleHandler(object):
             if criteria == 1:
                 if premiumScore != 0:
                     premiumScore -= self.POINT1
-                objParam.SCORE += (self.POINT1 + premiumScore)
+                objScore.SCORE += (self.POINT1 + premiumScore)
             elif criteria == 2:
                 if premiumScore != 0:
                     premiumScore -= self.POINT2
-                objParam.SCORE += (self.POINT2 + premiumScore) 
+                objScore.SCORE += (self.POINT2 + premiumScore) 
             elif criteria == 3:
                 if premiumScore != 0:
                     premiumScore -= self.POINT3
-                objParam.SCORE += (self.POINT3 + premiumScore)
+                objScore.SCORE += (self.POINT3 + premiumScore)
             elif criteria == 4:
                 if premiumScore != 0:
                     premiumScore -= self.POINT4
-                objParam.SCORE += (self.POINT4 + premiumScore)             
+                objScore.SCORE += (self.POINT4 + premiumScore)             
             return True
         else:
             return False
