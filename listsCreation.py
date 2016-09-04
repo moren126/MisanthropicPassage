@@ -262,22 +262,27 @@ def prepareSpecialPuzzlesDiff2Colors(iteratorStarter, colorRange, nameFragment, 
         iteratorStarter -= 1
         
     return puzzles 
-    
-def createSpecialPuzzles(objParam, iteratorStarters):
-    specialPuzzles = []
+  
+def createDeletePuzzles(howMany):
+    deletePuzzles = []
     dimage = pygame.image.load('utilities\delete.png') 
     
     ### kafelki z koszem
-    for i in range(6):    
-        objSpecPuzzle = {'pattern': 'nevermind',
+    for i in range(howMany):    
+        objDelPuzzle = {'pattern': 'nevermind',
                          'colorU': 'nevermind',
                          'colorR': 'nevermind',
                          'colorD': 'nevermind',
                          'colorL': 'nevermind',
                          'tour': -10,
                          'image': dimage}
-        specialPuzzles.append(objSpecPuzzle) 
-        
+        deletePuzzles.append(objDelPuzzle) 
+    
+    return deletePuzzles    
+  
+def createSpecialPuzzles(iteratorStarters):
+    specialPuzzles = []
+      
     # 1. 1 pole - 1/4
     onecolor1 = prepareSpecialPuzzlesSameColor(iteratorStarters[0], 6, 3, 0, False, False, True, False)
     specialPuzzles.extend(onecolor1)
@@ -345,6 +350,12 @@ def createSpecialPuzzles(objParam, iteratorStarters):
     twocolors8 = prepareSpecialPuzzlesDiff2Colors(iteratorStarters[15], 6, 2, 270)
     specialPuzzles.extend(twocolors8)      
 
+    # 17. kosze
+    lengthUntilNow = len(specialPuzzles)
+    trashNumber = int (0.2 * lengthUntilNow)
+    trash = createDeletePuzzles(trashNumber)
+    specialPuzzles.extend(trash) 
+    
     ###debug    
     #plik = open('puzle.txt', 'w')
     ###    
@@ -364,7 +375,7 @@ def createPreparedPuzzles(objParam):
     mixed = []
     ordinary = createOrdinaryPuzzles(objParam) #objParam.REST tu jt 
     iteratorStarters = createIterators()
-    special = createSpecialPuzzles(objParam, iteratorStarters)
+    special = createSpecialPuzzles(iteratorStarters)
     
     randoms = createRandoms(72)
     k = 0
@@ -372,7 +383,7 @@ def createPreparedPuzzles(objParam):
     ordinaryLength = len(ordinary)
 
     ###debug    
-    plik = open('puzle.txt', 'w')
+    #plik = open('puzle.txt', 'w')
     ###
     
     for i in range(ordinaryLength):
@@ -384,14 +395,14 @@ def createPreparedPuzzles(objParam):
                 mixed.append(temp2)            
                 k += 1  
                 ###            
-                plik.write(str(temp2) + '\n')            
+                #plik.write(str(temp2) + '\n')            
                 ### 
         mixed.append(temp)   
         ###            
-        plik.write(str(temp) + '\n')            
+        #plik.write(str(temp) + '\n')            
         ###         
     ###
-    plik.close()
+    #plik.close()
     ###    
     return mixed
     
@@ -400,11 +411,8 @@ def drawNewPuzzles(objParam, iteratorJump):
     
     iteratorStarters = createIterators()
     newIteratorStarters = [i+iteratorJump for i in iteratorStarters]
-    #print(newIteratorStarters)
-    sthToChoose = createSpecialPuzzles(objParam, newIteratorStarters)
-    
-
-    
+    sthToChoose = createSpecialPuzzles(newIteratorStarters)
+     
     if left > 1:
         for i in range(1, left):
             temp = objParam.PREPAREDPUZZLES.pop(i)
@@ -413,7 +421,7 @@ def drawNewPuzzles(objParam, iteratorJump):
                 if not bool(sthToChoose): # jesli lista slownikow jt pusta
                     [i+iteratorJump for i in newIteratorStarters]
                     print(newIteratorStarters)   
-                    sthToChoose = createSpecialPuzzles(objParam, newIteratorStarters)
+                    sthToChoose = createSpecialPuzzles(newIteratorStarters)
                     drawIterator += iteratorJump
                 temp2 = sthToChoose.pop(0)
                 objParam.PREPAREDPUZZLES.insert(i, temp2) 
@@ -423,7 +431,7 @@ def drawNewPuzzles(objParam, iteratorJump):
             
     elif left == 1:
         if not bool(sthToChoose): # jesli lista slownikow jt pusta
-            sthToChoose = createSpecialPuzzles(objParam, newIteratorStarters)
+            sthToChoose = createSpecialPuzzles(newIteratorStarters)
         temp2 = sthToChoose.pop(0)
         objParam.PREPAREDPUZZLES.append(temp2)
     

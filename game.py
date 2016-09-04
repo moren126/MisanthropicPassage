@@ -13,7 +13,6 @@ FPS = 60 #15 #30
 startTime = 0
 
 #
-PAUSE = False
 BACK = USEREVENT + 1
 DEBUGMODE = True
 #
@@ -44,13 +43,15 @@ class Game(Parameters):
         # parametry do wyswietlania kolejnego kafelka
         self.NEXTX = self.WIDTH - self.SQUARESIZE - ((self.BOARDX - self.SQUARESIZE) / 2)
         self.NEXTY = (self.HEIGHT - self.SQUARESIZE) / 2
-        
+
+        self.STARTTIME = 0        
         
         self.PAUSE = False
         self.PAUSEDTIME = 0
         
         self.NEWGAME = False    
         self.WIN = False
+        self.GAMEOVER = False
         
         self.SHOWPOSSIBILITIES = False
         self.POSSIBILITIES = []
@@ -62,6 +63,7 @@ class Game(Parameters):
         self.TOUR = 0
 
         self.drawIterator = 100
+
         
     # obsluga rozgrywki
     def runGame(self, objState):
@@ -75,7 +77,7 @@ class Game(Parameters):
             logoSurface = pygame.image.load('utilities\playboard.png')
             self.displaySurface.blit(logoSurface, (self.BOARDX, self.BOARDY))      
 
-            startTime = time.time()
+            self.STARTTIME = time.time()
        
             # jesli nowa gra - ustawienie parametrow na nowa rozgrywke
             if self.NEWGAME:
@@ -84,7 +86,23 @@ class Game(Parameters):
             Game.flickeringSquares(self, objPuzzleHandler)
             Game.nextPuzzle(self)
             Game.placedPuzzles(self)
-            objScore.scoringDisplay(self, objState, startTime)
+            endGame = objScore.scoringDisplay(self, objState)
+            
+            # KONIEC GRY - wygrana 
+            if endGame[0]:      
+                self.CLICKPUZZLE = False
+                self.WIN = True  
+                ###
+                print('Game.placePuzzle linia ~95: WIN!')
+                ###
+
+            # KONIEC GRY - koniec kredytow
+            if endGame[1]:
+                self.CLICKPUZZLE = False
+                self.GAMEOVER = True
+                ###
+                print('Game.placePuzzle linia ~103: GAME OVER!')
+                ###
             
             """
             ### testowanie
@@ -162,8 +180,8 @@ class Game(Parameters):
                     
         #zerowanie wyniku, czasu
         objScore.setScoring('noCumulation')
-
-        startTime = time.time()
+        self.STARTTIME = time.time()
+        
         self.PAUSEDTIME = 0       
         objPuzzleHandler = PuzzleHandler(self.COLUMNS, self.ROWS, self.STARTPUZZLEX, self.STARTPUZZLEY) 
         self.JUSTCOUNTER = 0   
@@ -171,6 +189,7 @@ class Game(Parameters):
         objState.setCreditFromDiff()
         self.CLICKPUZZLE = True
         self.WIN = False
+        self.GAMEOVER = False
         self.NEWGAME = False
 
     # wyswietlenie mozliwosci po ominieciu kafelka ktory mozna bylo polozyc    
@@ -299,14 +318,25 @@ class Game(Parameters):
             
             self.PREPAREDPUZZLES.pop(0)
 
-        # KONIEC GRY    
+        """    
+        # KONIEC GRY - wygrana   
         if self.REST == 0:        
             self.CLICKPUZZLE = False
             self.WIN = True  
             ###
-            print('Game.placePuzzle linia ~341: WIN!')
+            print('Game.placePuzzle linia ~307: WIN!')
             ###
-    
+        
+        # KONIEC GRY - koniec kredytow
+        credits = objState.getCredit()
+        if credits <= 0:
+            self.CLICKPUZZLE = False
+            self.GAMEOVER = True
+            ###
+            print('Game.placePuzzle linia ~316: GAME OVER!')
+            ###
+        """
+        
     # wyswietlenie polozonych kalefkow    
     def placedPuzzles(self):
         for i in self.PLACEDPUZZLES:

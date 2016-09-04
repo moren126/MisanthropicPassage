@@ -24,9 +24,10 @@ class Scoring(object):
             self.FIRSTTIMEENTRANCE = True
             self.TIMEBEFORE = 0        
         
-    def scoringDisplay(self, objParam, objState, startTime):
+    def scoringDisplay(self, objParam, objState):
 
         global delay
+        endOfPuzzles = endOfCredits = False
          
         punctDistance = objParam.BOARDWITH / 5
         punctX = objParam.BOARDX
@@ -35,12 +36,18 @@ class Scoring(object):
         left = objParam.REST
         score = self.SCORE
         
+        if left == 0:
+            endOfPuzzles = True
+        if credit <= 0:
+            endOfCredits = True
+            credit = 0
+        
         if self.FIRSTTIMEENTRANCE:
-            delay = startTime - self.CURRENTTIME
+            delay = objParam.STARTTIME - self.CURRENTTIME
             self.FIRSTTIMEENTRANCE = False
 
-        if not objParam.WIN:    
-            elapsedTime = startTime - self.CURRENTTIME - delay - objParam.PAUSEDTIME  
+        if not objParam.WIN and not objParam.GAMEOVER:    
+            elapsedTime = objParam.STARTTIME - self.CURRENTTIME - delay - objParam.PAUSEDTIME  
             self.TIMEBEFORE = elapsedTime
         else:    
             elapsedTime = self.TIMEBEFORE
@@ -53,6 +60,7 @@ class Scoring(object):
         Scoring.caption(objParam, 'Record', 30, punctX + 3 * punctDistance + 70, punctY, 200, 30, 'dupa')        
         Scoring.caption(objParam, 'Score', 30, punctX + 4 * punctDistance + 90, punctY, 200, 30, score)     
 
+        return (endOfPuzzles, endOfCredits)
 
     def caption(objParam, msg, fontSize, x, y, w, h, variable):
 
