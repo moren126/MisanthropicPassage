@@ -1,15 +1,17 @@
-import pygame, time, sys, random
-from pygame.locals import* # pygame evemty w tym są np QUIT
+import pygame, time, sys, random, os, pickle
+from os import path
+from pygame.locals import*
 
 from parameters import Parameters
 from colors import*
-from button import button
+from button import button, checkButton
 from listsCreation import createSquares, createPreparedPuzzles, drawNewPuzzles
 from puzzleHandler import PuzzleHandler
 from scoringDisplay import Scoring
+from dataStorage import store
+from randoms import insultOrNot, chooseInsult
 
-
-FPS = 60 #15 #30
+FPS = 60
 startTime = 0
 
 #
@@ -26,18 +28,18 @@ class Game(Parameters):
         self.COLUMNS = 12
         self.ROWS = 8
 
-        # pozycja poczatkowa pierszego kafla (potrzebne do tworzenia list, wiec musi byc przed create'ami)
-        self.STARTPUZZLEX = random.randrange(1, self.COLUMNS)
-        self.STARTPUZZLEY = random.randrange(1, self.ROWS) 
+        # pozycja poczatkowa pierszego kafelka (potrzebne do tworzenia list, wiec musi byc przed create'ami)
+        self.STARTPUZZLEX = 0
+        self.STARTPUZZLEY = 0
         
         # parametry pol
-        self.SQUARESIZE = 100
+        self.SQUARESIZE = self.PUZZLESIZE #100
         self.STARTX = self.BOARDX
         self.STARTY = self.BOARDY
         
         # tworzenie pol i kafelkow
-        self.SQUARES = createSquares(self)
-        self.PREPAREDPUZZLES = createPreparedPuzzles(self)
+        self.SQUARES = []
+        self.PREPAREDPUZZLES = []
         self.PLACEDPUZZLES = []
         
         # parametry do wyswietlania kolejnego kafelka
@@ -49,9 +51,10 @@ class Game(Parameters):
         self.PAUSE = False
         self.PAUSEDTIME = 0
         
-        self.NEWGAME = False    
-        self.WIN = False
-        self.GAMEOVER = False
+        self.NEWGAME = False   
+        self.ENDGAME = False       
+        #self.WIN = False
+        #self.GAMEOVER = False
         
         self.SHOWPOSSIBILITIES = False
         self.POSSIBILITIES = []
@@ -63,47 +66,116 @@ class Game(Parameters):
         self.TOUR = 0
 
         self.drawIterator = 100
+        
+        # parametry do wyswietlania bonusow
+        self.SHOWBONUS = False
+        self.BONUSVAL = 0
+        self.ITSTIME = 0
+        
+        self.SHOWLOSS = (False, 0, 0)
+        
+        self.SHOWINSULT = False
+        self.doItOnce = 0 
 
+        self.fontSize = int(self.FONTSIZE / 2) #15
         
     # obsluga rozgrywki
     def runGame(self, objState):
-    
         CLOCK = pygame.time.Clock()    
+        
+        # wspolczynniki zalezne od wybranego poziomu trudnosci
+        trashFactor = objState.getTrashFactor()
+        gameMode = objState.getMode()
+        startPuzzleFactor = objState.getStartFactor()
+        
+        # pozycja poczatkowego kafelka
+        self.STARTPUZZLEX = random.randrange(1 + startPuzzleFactor, self.COLUMNS - startPuzzleFactor)
+        self.STARTPUZZLEY = random.randrange(1 + startPuzzleFactor, self.ROWS - startPuzzleFactor) 
+        
+        # listy potrzebne do rozgrywki
+        self.SQUARES = createSquares(self)
+        self.PREPAREDPUZZLES = createPreparedPuzzles(self, trashFactor, 0)
+
+        # obiekty potrzebne do rozgrywki
         objPuzzleHandler = PuzzleHandler(self.COLUMNS, self.ROWS, self.STARTPUZZLEX, self.STARTPUZZLEY)
         objScore = Scoring()
                     
         while True:      
-            self.displaySurface.fill(GROUNDCOLOR)            
-            logoSurface = pygame.image.load('utilities\playboard.png')
-            self.displaySurface.blit(logoSurface, (self.BOARDX, self.BOARDY))      
+            # kolor tla
+            self.displaySurface.fill(GROUNDCOLOR)    
 
+            # wyswietlanie planszy    
+            boardSurface = pygame.image.load(path.join('utilities', 'playboard.png'))
+            boardSurfaceScaled = pygame.transform.scale(boardSurface, (self.BOARDWITH, self.BOARDHEIGHT))
+            self.displaySurface.blit(boardSurfaceScaled, (self.BOARDX, self.BOARDY))      
+
+            # czas rozpoczecia rozgrywki
             self.STARTTIME = time.time()
        
             # jesli nowa gra - ustawienie parametrow na nowa rozgrywke
             if self.NEWGAME:
-                Game.setNewGame(self, objState, objPuzzleHandler, objScore)
+                Game.setNewGame(self, objState, objScore)
+                objPuzzleHandler = PuzzleHandler(self.COLUMNS, self.ROWS, self.STARTPUZZLEX, self.STARTPUZZLEY) 
 
-            Game.flickeringSquares(self, objPuzzleHandler)
-            Game.nextPuzzle(self)
+            # podswietlanie pol najechanych kursorem    
+            if not self.ENDGAME:
+                Game.flickeringSquares(self, objPuzzleHandler)
+            
+            # wyswietlanie kafelka czekajacego na polozenie
+            Game.nextPuzzle(self, objState, gameMode)
+            
+            # wyswietlanie polozonych kafelkow
             Game.placedPuzzles(self)
-            endGame = objScore.scoringDisplay(self, objState)
+            
+            # wyswietlanie punktacji
+            result = objScore.scoringDisplay(self, objState, gameMode)
+            
+            # wyswietlanie napisu o pauzie        
+            Game.pauseText(self)
+            
+            # sprawdzenie czy nie doszlo do konca rozgrywki
+            endGame = objScore.endOfPlay()
             
             # KONIEC GRY - wygrana 
-            if endGame[0]:      
+            if endGame[0]:  
                 self.CLICKPUZZLE = False
-                self.WIN = True  
-                ###
-                print('Game.placePuzzle linia ~95: WIN!')
-                ###
-
+                self.ENDGAME = True              
+                objPuzzleHandler.clearFill() # na wszelki wypadek
+                
+                # napis 'WIN'
+                w = 700 
+                h = 70
+                pygame.draw.rect(self.displaySurface, RED, (self.HALFWIDTH - w/2, self.HALFHEIGHT - h, w, h))
+               
+                fontButton = pygame.font.Font(self.FONTNAME, 50)    
+                textSurfButton = fontButton.render('WIN', True, WHITE)
+                textRectButton = textSurfButton.get_rect()
+                textRectButton.center = (self.HALFWIDTH, self.HALFHEIGHT - 0.5 * h)
+                self.displaySurface.blit(textSurfButton, textRectButton) 
+                
+                store(objState, result)
+    
             # KONIEC GRY - koniec kredytow
             if endGame[1]:
                 self.CLICKPUZZLE = False
-                self.GAMEOVER = True
-                ###
-                print('Game.placePuzzle linia ~103: GAME OVER!')
-                ###
-            
+                self.ENDGAME = True
+                #self.GAMEOVER = True
+                objPuzzleHandler.clearFill() # na wszelki wypadek
+                
+                # napis 'Game Over'
+                w = 700 
+                h = 70
+                pygame.draw.rect(self.displaySurface, RED, (self.HALFWIDTH - w/2, self.HALFHEIGHT - h, w, h))
+               
+                fontButton = pygame.font.Font(self.FONTNAME, 50)    
+                textSurfButton = fontButton.render('Game Over', True, WHITE)
+                textRectButton = textSurfButton.get_rect()
+                textRectButton.center = (self.HALFWIDTH, self.HALFHEIGHT - 0.5 * h)
+                self.displaySurface.blit(textSurfButton, textRectButton)    
+
+                if gameMode == 'Continuous':
+                    store(objState, result)
+           
             """
             ### testowanie
             if DEBUGMODE:
@@ -119,22 +191,49 @@ class Game(Parameters):
                         pygame.draw.rect(self.displaySurface, GREEN, (i['startX'], i['startY'], self.SQUARESIZE, self.SQUARESIZE))          
             """
             
-            # rysowanie mozliwych ruchow przez ~2s          
+            # rysowanie mozliwych ruchow po skip'ie przez ~2s          
             if self.SHOWPOSSIBILITIES:
-                Game.showPossibleMoves(self, 2, STARTSHOW)
+                Game.showPossibleMoves(self, 2, STARTSHOW[0], gameMode)
+
+               
+            # if sth wyswietl premie przez 2s        
+            if self.SHOWBONUS:
+                msg = '+ ' + str(self.BONUSVAL)
+                itsTime = self.ITSTIME
+                x = self.BOARDX + 4 * (self.BOARDWITH / 5) + 90 + 50
+                y = self.BOARDY / 2
+                Game.bonusOrLossInfo(self, msg, 2, itsTime, x, y)
+                if self.doItOnce == 0:
+                    shouldInsult = insultOrNot()
+                    if shouldInsult:
+                        self.SHOWINSULT = True
+                        timee = itsTime
+                        insult = chooseInsult('plus')
+                    self.doItOnce += 1
+                    
+                
+            if self.SHOWLOSS[0]: 
+                msg = '- ' + str(self.SHOWLOSS[1])
+                x = self.BOARDX + 75
+                y = self.BOARDY / 2
+                Game.bonusOrLossInfo(self, msg, 2, self.SHOWLOSS[2], x, y)
+                if self.doItOnce == 0:
+                    shouldInsult = insultOrNot()  
+                    if shouldInsult:
+                        self.SHOWINSULT = True
+                        timee = self.SHOWLOSS[2]
+                        insult = chooseInsult('minus')
+                    self.doItOnce += 1
                         
-    
+            if self.SHOWINSULT:   
+                Game.showInsult(self, insult, 6, timee)
+            
             # obsługa zdarzeń
             for event in pygame.event.get():
                 if event.type == QUIT:
                     pygame.quit()
                     sys.exit()
-                    
-                elif event.type == KEYUP:
-                    if event.key == K_ESCAPE:
-                        pygame.quit()
-                        sys.exit()
-       
+
                 elif event.type == KEYDOWN:
                     # przycisniecie p - pauza 
                     if event.key == K_p:
@@ -143,74 +242,136 @@ class Game(Parameters):
 
                 # wlasny event ktory daje 'True' jak klikniety button 'Back to menu'     
                 elif event.type == BACK:
+                    #time.sleep(0.2)
                     objState.setState('WelcomeMenu')
                     return
                     
                 # klikniecie PPM -> polozenie lub usuniecie puzla
                 elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.CLICKPUZZLE):
-                    Game.clickSquare(self, objPuzzleHandler, objScore)
+                    Game.clickSquare(self, objPuzzleHandler, objScore, objState)
                     
                 # klikniecie LPM -> omijanie puzzla 
                 elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 3) and self.CLICKPUZZLE:
-                    STARTSHOW = objPuzzleHandler.skipPuzzle(self, objState)    
+                    STARTSHOW = objPuzzleHandler.skipPuzzle(self, objState, gameMode)   
+                    if STARTSHOW is not None:
+                        self.SHOWLOSS = (True, STARTSHOW[1], STARTSHOW[0])    
 
             # przyciski z menu po lewej        
             if objState.STATE == 'Game':
-                if button(self, 'New Game',     30, self.BUTTONDISTANCEX, self.HALFHEIGHT + (self.BUTTONHEIGHT + 50), self.BUTTONWIDTH, self.BUTTONHEIGHT):
-                    Game.buttonGameAction(self, 'New Game', objState)  
-                if button(self, 'Back to menu', 30, self.BUTTONDISTANCEX, self.HALFHEIGHT + (2*self.BUTTONHEIGHT + 2*50), self.BUTTONWIDTH, self.BUTTONHEIGHT):
-                    Game.buttonGameAction(self, 'Back to menu', objState)
-                if button(self, 'Quit',         30, self.BUTTONDISTANCEX, self.HALFHEIGHT + (3*self.BUTTONHEIGHT + 3*50), self.BUTTONWIDTH, self.BUTTONHEIGHT):
+                if button(self, 'New Game',     self.FONTSIZE, self.BUTTONDISTANCEX, self.BUTTONDOWNY - (2*self.BUTTONHEIGHT + 2*50), self.BUTTONWIDTH, self.BUTTONHEIGHT):
+                    Game.buttonGameAction(self, 'NewGame', objState)  
+                if button(self, 'Back to menu', self.FONTSIZE, self.BUTTONDISTANCEX, self.BUTTONDOWNY - (self.BUTTONHEIGHT + 50), self.BUTTONWIDTH, self.BUTTONHEIGHT):
+                    Game.buttonGameAction(self, 'BackMenu', objState)
+                if button(self, 'Quit',         self.FONTSIZE, self.BUTTONDISTANCEX, self.BUTTONDOWNY, self.BUTTONWIDTH, self.BUTTONHEIGHT):
                     Game.buttonGameAction(self, 'Quit', objState)
 
-                    
-            Game.pauseText(self)
-  
             pygame.display.update()
             CLOCK.tick(FPS)
     
     # parametry na nowa rozgrywke
-    def setNewGame(self, objState, objPuzzleHandler, objScore):
-        self.STARTPUZZLEX = random.randrange(1, self.COLUMNS)
-        self.STARTPUZZLEY = random.randrange(1, self.ROWS) 
-                
+    def setNewGame(self, objState, objScore):
+        startPuzzleFactor = objState.getStartFactor()
+        self.STARTPUZZLEX = random.randrange(1 + startPuzzleFactor, self.COLUMNS - startPuzzleFactor)
+        self.STARTPUZZLEY = random.randrange(1 + startPuzzleFactor, self.ROWS - startPuzzleFactor) 
+        
+        trashFactor = objState.getTrashFactor()
+        
         self.PLACEDPUZZLES[:] = []                    
         self.SQUARES = createSquares(self)
-        self.PREPAREDPUZZLES = createPreparedPuzzles(self)
+        self.PREPAREDPUZZLES = createPreparedPuzzles(self, trashFactor, 0)
                     
         #zerowanie wyniku, czasu
         objScore.setScoring('noCumulation')
         self.STARTTIME = time.time()
+        objState.setCreditFromDiff()
         
-        self.PAUSEDTIME = 0       
-        objPuzzleHandler = PuzzleHandler(self.COLUMNS, self.ROWS, self.STARTPUZZLEX, self.STARTPUZZLEY) 
+        self.PAUSEDTIME = 0  
         self.JUSTCOUNTER = 0   
         self.TOUR = 0         
-        objState.setCreditFromDiff()
+
         self.CLICKPUZZLE = True
-        self.WIN = False
-        self.GAMEOVER = False
+        
+        #self.WIN = False
+        #self.GAMEOVER = False
+        self.ENDGAME = False
         self.NEWGAME = False
 
+
     # wyswietlenie mozliwosci po ominieciu kafelka ktory mozna bylo polozyc    
-    def showPossibleMoves(self, delay, STARTSHOW):
+    def showPossibleMoves(self, delay, startShow, gameMode):
         self.CLICKPUZZLE = False
+        
         for i in self.POSSIBILITIES:     
             pygame.draw.rect(self.displaySurface, BRIGHTRED, (i['startX'], i['startY'], self.SQUARESIZE, self.SQUARESIZE))
                     
-            #odliczanie czasu
+            # odliczanie czasu
             stopShow = time.time()
-            showTime = stopShow - STARTSHOW
+            showTime = stopShow - startShow
 
+            # po odliczeniu opoznienia
             if showTime >= (delay - 1):
+                # usuniecie omijanego kafelka z listy oczekujacych
                 movingPuzzle = self.PREPAREDPUZZLES.pop(0)
-                if movingPuzzle['tour'] != -19 and movingPuzzle['tour'] != -10:
-                    movingPuzzle['tour'] += 1 
-                    self.PREPAREDPUZZLES.append(movingPuzzle) 
+                
+                # w trybie 'Classic' jesli byl to zwykly kafelek, zwieksza sie tura, kafelek wraca do puli
+                if gameMode == 'Classic':
+                    if movingPuzzle['tour'] != -19 and movingPuzzle['tour'] != -10:
+                        movingPuzzle['tour'] += 1     
+                    self.PREPAREDPUZZLES.append(movingPuzzle)
+                    
+                # w trybie 'Continuous' kazdy ominiety kafelek zmniejsza licznik REST i nie wraca do puli
+                elif gameMode == 'Continuous':
+                    self.REST -= 1
+                        
                 self.SHOWPOSSIBILITIES = False
                 self.POSSIBILITIES[:] = []
+                
+                # klikanie mysza znow aktywne
                 self.CLICKPUZZLE = True        
     
+    
+    # wyswietlanie bonusow
+    def bonusOrLossInfo(self, msg, delay, startShowing, x, y):
+   
+        stopShowing = time.time()
+        showTime = stopShowing - startShowing
+        
+        if showTime >= (delay - 1):
+            self.SHOWBONUS = False 
+            self.SHOWLOSS = (False, 0, 0)
+            self.BONUSVAL = 0
+            self.fontSize = 15
+            self.doItOnce = 0 
+        else:
+            font = pygame.font.Font(self.FONTNAME, self.fontSize)    
+            textSurf = font.render(msg, True, WHITE)
+            textRect = textSurf.get_rect()
+            textRect.center = ( int(x + self.fontSize/2), int(y - self.fontSize/2) )
+            self.displaySurface.blit(textSurf, textRect)  
+            self.fontSize += 1
+         
+
+    def showInsult(self, msg, delay, startShowing):
+        stopShowing = time.time()
+        showTime = stopShowing - startShowing
+        
+        fontS = int((20 * self.WIDTH) / 1900)
+        x = self.HALFWIDTH
+        y = self.HEIGHT - 1.5 * fontS 
+        
+        if showTime >= (delay - 1):
+            self.SHOWINSULT = False
+            self.doItOnce = 0
+        else:
+            font = pygame.font.Font(self.FONTNAME, fontS)    
+            textSurf = font.render(str(msg), True, WHITE)
+            textRect = textSurf.get_rect()
+            textRect.center = ( int(x + fontS/2), int(y - fontS/2) )
+            self.displaySurface.blit(textSurf, textRect)  
+
+            
+            
+
     # zwraca najechane kursorem pole i tryb (mozliwe do polozenia, mozliwe do usuniecia)  
     def getHighlighted(self, objPuzzleHandler):
         global posX, posY 
@@ -227,11 +388,11 @@ class Game(Parameters):
         
             # pobieranie pozycji kursora w kolumnach i wierszach 
             for x in range(self.COLUMNS):
-                if mouseX <= (x * 100 + self.STARTX + self.SQUARESIZE):
+                if mouseX <= (x * self.PUZZLESIZE + self.STARTX + self.SQUARESIZE):
                     posX = x + 1
                     break
             for y in range(self.ROWS):
-                if mouseY <= (y * 100 + self.STARTY + self.SQUARESIZE):
+                if mouseY <= (y * self.PUZZLESIZE + self.STARTY + self.SQUARESIZE):
                     posY = y + 1                
                     break
             
@@ -263,7 +424,8 @@ class Game(Parameters):
                 pygame.draw.rect(self.displaySurface, YELLOW, (highlighted['startX'], highlighted['startY'], self.SQUARESIZE, self.SQUARESIZE))
      
     # obsluga klikniecia pola i usuwania polozonego kafelka
-    def clickSquare(self, objPuzzleHandler, objScore):
+    def clickSquare(self, objPuzzleHandler, objScore, objState):
+        gameMode = objState.getMode()
         result = Game.getHighlighted(self, objPuzzleHandler)
         highlighted = result[0]
         mode = result[1]        
@@ -271,20 +433,18 @@ class Game(Parameters):
         # tryb kladzenia kafelka
         if mode == 1 and not self.DELETEPUZZLE:
             if highlighted['sState'] == 'ready':
-                if objPuzzleHandler.isMovePossible(self, objScore, highlighted):
+                isPossibleAndMore = objPuzzleHandler.isMovePossible(self, objScore, highlighted, objState)
+                if isPossibleAndMore[0]:
                     highlighted['sState'] = 'occupied'
-                    Game.placePuzzle(self, highlighted['x'], highlighted['y'], highlighted['startX'], highlighted['startY'])
-            elif highlighted['sState'] == 'unoccupied':   
-                #komunikat o niedozowlonym ruchu
-                pass
-                
+                    Game.placePuzzle(self, objPuzzleHandler, highlighted['x'], highlighted['y'], highlighted['startX'], highlighted['startY'], gameMode, isPossibleAndMore[1])
+               
         # tryb usuwania kafelka        
         elif mode == 2 and self.DELETEPUZZLE:
             if highlighted['sState'] == 'occupied':
                 objPuzzleHandler.deletePuzzle(self, highlighted['x'], highlighted['y']) 
                                        
     # dolaczenie kładzionego kafelka do listy polozonych kafelkow              
-    def placePuzzle(self, posX, posY, positionX, positionY):
+    def placePuzzle(self, objPuzzleHandler, posX, posY, positionX, positionY, gameMode, deleteFull):
 
         for i in self.SQUARES:
             if (i['x'] == posX - 1 and i['y'] == posY) or (i['x'] == posX + 1 and i['y'] == posY):
@@ -316,26 +476,17 @@ class Game(Parameters):
             if self.PREPAREDPUZZLES[0]['tour'] != -19:
                 self.REST -= 1
             
+            # usuniecie polozonego kafelka z listy oczekujacych
             self.PREPAREDPUZZLES.pop(0)
+            
+            if gameMode == 'Continuous':
+                objPuzzleHandler.deleteIfNeeded(self, posX, posY, deleteFull)
 
-        """    
-        # KONIEC GRY - wygrana   
-        if self.REST == 0:        
-            self.CLICKPUZZLE = False
-            self.WIN = True  
-            ###
-            print('Game.placePuzzle linia ~307: WIN!')
-            ###
-        
-        # KONIEC GRY - koniec kredytow
-        credits = objState.getCredit()
-        if credits <= 0:
-            self.CLICKPUZZLE = False
-            self.GAMEOVER = True
-            ###
-            print('Game.placePuzzle linia ~316: GAME OVER!')
-            ###
-        """
+            ###    
+            if deleteFull != 0:
+                self.SHOWBONUS = True
+                self.BONUSVAL = deleteFull
+                self.ITSTIME = time.time()
         
     # wyswietlenie polozonych kalefkow    
     def placedPuzzles(self):
@@ -344,7 +495,7 @@ class Game(Parameters):
             self.displaySurface.blit(surface, (i['startX'], i['startY'])) 
 
     # wyswietlenie kolejnego kafelka po prawej stronie ekranu        
-    def nextPuzzle(self):  
+    def nextPuzzle(self, objState, gameMode):  
         # tlo do 'Next Puzzle'
         back = pygame.image.load('utilities\pback.png')
         self.displaySurface.blit(back, (self.NEXTX - 25, self.NEXTY - 25)) 
@@ -372,15 +523,7 @@ class Game(Parameters):
                             'pColorL': 'neutral',}        
             self.PLACEDPUZZLES.append(objPuzzle)
         
-        # losowanie kafelkow specjalnych do dodania do pozostałych do polozenia, gdy te sa w kolejnym obiegu
-        if (self.PREPAREDPUZZLES is not None): 
-            if(self.PREPAREDPUZZLES[0]['tour'] > self.TOUR):
-                drawNewPuzzles(self, self.drawIterator)
-                self.TOUR += 1
-                self.drawIterator += 100
-                ###
-                print('Tura' + str(self.TOUR))
-                ###
+        
         
         if self.REST != 0:
             surface = self.PREPAREDPUZZLES[0]['image']
@@ -390,14 +533,33 @@ class Game(Parameters):
             
         else: # wyswietlenie konca puzli
             surface = pygame.image.load('utilities\end.png')
-            self.displaySurface.blit(surface, (self.NEXTX, self.NEXTY)) 
+            self.displaySurface.blit(surface, (self.NEXTX, self.NEXTY))         
+        
+             
+        # losowanie kafelkow specjalnych do dodania do pozostałych do polozenia, gdy te sa w kolejnym obiegu
+        if gameMode == 'Classic': 
+            if self.PREPAREDPUZZLES is not None:
+                if(self.PREPAREDPUZZLES[0]['tour'] > self.TOUR):
+                    trashFactor = objState.getTrashFactor()
+                    drawNewPuzzles(self, self.drawIterator, trashFactor, gameMode)
+                    self.TOUR += 1
+                    self.drawIterator += 100
+                    ###
+                    #print('Tura' + str(self.TOUR))
+                    ###
+        elif gameMode == 'Continuous':
+            if self.REST <= 2:
+                trashFactor = objState.getTrashFactor()
+                drawNewPuzzles(self, self.drawIterator, trashFactor, gameMode)
+        
+
 
     # napis 'Press p to pause'
     def pauseText(self):
         font = pygame.font.Font(self.FONTNAME, 26)    
         textSurf = font.render('Press \'p\' to pause', True, WHITE)
         textRect = textSurf.get_rect()
-        textRect.center = ( self.NEXTX + 50, self.HEIGHT - self.BOARDY - 13 )
+        textRect.center = ( self.NEXTX + 50, self.HEIGHT - self.BOARDY + 40)
         self.displaySurface.blit(textSurf, textRect)      
     
     # odblokowanie pauzy    
@@ -437,52 +599,16 @@ class Game(Parameters):
             
             pygame.display.update()
                
-    ### okazja do pocwiczenia nadpisania f-cji z WelcomeScreen bottonAction 
     # obsluga przyciskow obecnych w trakcie rozgrywki
     def buttonGameAction(self, msg, objState):
-        if msg == 'New Game':      
+        if msg == 'NewGame':      
             self.NEWGAME = True  
 
-        elif msg == 'Back to menu':
+        elif msg == 'BackMenu':
+            self.NEWGAME = True
             event = pygame.event.Event(BACK)
             pygame.event.post(event)
                         
         elif msg == 'Quit':
             pygame.quit()
             quit()
-                                   
-            
-"""
-            # obsługa zdarzeń
-            for event in pygame.event.get():
-                if event.type == QUIT:
-                    Game.terminate()
-
-                elif event.type == KEYDOWN:
-                    #
-                    elif event.key == K_p:
-                        PAUSE = True
-                        Game.paused(windowParameters)
-                    #
-                    elif winMode and event.key == K_m:
-                        return
-                        
-                elif event.type == KEYUP:
-
-                    elif event.key == K_ESCAPE:
-                        Game.terminate()
-
-            # sprawdzenie czy gracz wygrał
-            if winMode:
-                windowParameters.displaySurface.blit(winSurf, winRect)
-                windowParameters.displaySurface.blit(winSurf2, winRect2)
-                pygame.mixer.music.fadeout(1000)
-                #pygame.mixer.music.stop()
-
-            pygame.display.update()
-            FPSCLOCK.tick(FPS)
-          
-    def terminate():
-        pygame.quit()
-        sys.exit()
-  """

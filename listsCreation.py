@@ -124,10 +124,6 @@ def prepareSpecialPuzzlesSameColor(iteratorStarter, colorRange, nameFragment, an
     return puzzles        
 
 def prepareSpecialPuzzlesDiff3Colors(iteratorStarter, colorRange, nameFragment, angle):
-
-    #t = prepareSpecialPuzzlesDiff3Colorsss(patternIterator, colorRange, nameFragment, angle)
-    #return t
-
     puzzles = []
     
     if angle == 90:
@@ -280,7 +276,7 @@ def createDeletePuzzles(howMany):
     
     return deletePuzzles    
   
-def createSpecialPuzzles(iteratorStarters):
+def createSpecialPuzzles(iteratorStarters, trashFactor):
     specialPuzzles = []
       
     # 1. 1 pole - 1/4
@@ -352,30 +348,24 @@ def createSpecialPuzzles(iteratorStarters):
 
     # 17. kosze
     lengthUntilNow = len(specialPuzzles)
-    trashNumber = int (0.2 * lengthUntilNow)
+    trashNumber = int (trashFactor * lengthUntilNow)
     trash = createDeletePuzzles(trashNumber)
     specialPuzzles.extend(trash) 
-    
-    ###debug    
-    #plik = open('puzle.txt', 'w')
-    ###    
-    #for i in specialPuzzles:
-        ###            
-        #plik.write(str(i) + '\n')            
-        ### 
-    ###
-    #plik.close()
-    ###        
-  
+       
     random.shuffle(specialPuzzles)
     return specialPuzzles  
 
 
-def createPreparedPuzzles(objParam):   
+def createPreparedPuzzles(objParam, trashFactor, iteratorJump):   
     mixed = []
     ordinary = createOrdinaryPuzzles(objParam) #objParam.REST tu jt 
     iteratorStarters = createIterators()
-    special = createSpecialPuzzles(iteratorStarters)
+    
+    if iteratorJump > 0:
+        newIteratorStarters = [i+iteratorJump for i in iteratorStarters]
+        special = createSpecialPuzzles(newIteratorStarters, trashFactor)
+    else:
+        special = createSpecialPuzzles(iteratorStarters, trashFactor)
     
     randoms = createRandoms(72)
     k = 0
@@ -406,32 +396,40 @@ def createPreparedPuzzles(objParam):
     ###    
     return mixed
     
-def drawNewPuzzles(objParam, iteratorJump):   
+def drawNewPuzzles(objParam, iteratorJump, trashFactor, mode):   
     left = objParam.REST
     
-    iteratorStarters = createIterators()
-    newIteratorStarters = [i+iteratorJump for i in iteratorStarters]
-    sthToChoose = createSpecialPuzzles(newIteratorStarters)
-     
-    if left > 1:
-        for i in range(1, left):
-            temp = objParam.PREPAREDPUZZLES.pop(i)
+    if mode == 'Classic':
+
+        iteratorStarters = createIterators()
+        newIteratorStarters = [i+iteratorJump for i in iteratorStarters]
+        
+        sthToChoose = createSpecialPuzzles(newIteratorStarters, trashFactor)
+         
+        if left > 1:
+            for i in range(1, left):
+                temp = objParam.PREPAREDPUZZLES.pop(i)
+                
+                if addSpecjalOrNot(0.5):
+                    if not bool(sthToChoose): # jesli lista slownikow jt pusta
+                        [i+iteratorJump for i in newIteratorStarters]
+                        print(newIteratorStarters)   
+                        sthToChoose = createSpecialPuzzles(newIteratorStarters, trashFactor)
+                        drawIterator += iteratorJump
+                    temp2 = sthToChoose.pop(0)
+                    objParam.PREPAREDPUZZLES.insert(i, temp2) 
+                    objParam.PREPAREDPUZZLES.insert(i + 1, temp)
+                else:    
+                    objParam.PREPAREDPUZZLES.insert(i, temp)    
+                
+        elif left == 1:
+            if not bool(sthToChoose): # jesli lista slownikow jt pusta
+                sthToChoose = createSpecialPuzzles(newIteratorStarters, trashFactor)
+            temp2 = sthToChoose.pop(0)
+            objParam.PREPAREDPUZZLES.append(temp2)
             
-            if addSpecjalOrNot(0.5):
-                if not bool(sthToChoose): # jesli lista slownikow jt pusta
-                    [i+iteratorJump for i in newIteratorStarters]
-                    print(newIteratorStarters)   
-                    sthToChoose = createSpecialPuzzles(newIteratorStarters)
-                    drawIterator += iteratorJump
-                temp2 = sthToChoose.pop(0)
-                objParam.PREPAREDPUZZLES.insert(i, temp2) 
-                objParam.PREPAREDPUZZLES.insert(i + 1, temp)
-            else:    
-                objParam.PREPAREDPUZZLES.insert(i, temp)    
-            
-    elif left == 1:
-        if not bool(sthToChoose): # jesli lista slownikow jt pusta
-            sthToChoose = createSpecialPuzzles(newIteratorStarters)
-        temp2 = sthToChoose.pop(0)
-        objParam.PREPAREDPUZZLES.append(temp2)
+    elif mode == 'Continuous':
     
+        if left == 2:
+            newPuzzles = createPreparedPuzzles(objParam, trashFactor, iteratorJump)
+            objParam.PREPAREDPUZZLES.extend(newPuzzles)

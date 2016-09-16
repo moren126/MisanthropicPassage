@@ -18,41 +18,47 @@ class PuzzleHandler(object):
         self.BONUS1 = 20
         self.BONUS2 = 30
         self.BONUS3 = 80
-              
+        #self.BONUS = 0
+    
+    # licznik zapelnienia wierszy    
     def createRowsFill(self):
         p = [0] * self.ROWS
         p.pop(self.STARTPUZZLEY - 1)    
         p.insert((self.STARTPUZZLEY - 1), 1)          
         return p
 
+    # licznik zapelnienia kolumn    
     def createColumnsFill(self):
         p = [0] * self.COLUMNS 
         p.pop(self.STARTPUZZLEX - 1)    
         p.insert((self.STARTPUZZLEX - 1), 1)    
         return p             
-      
+    
+    # usuwanie pojedynczego kafelka    
     def deletePuzzle(self, objParam, x, y):
-
         global temp
         
+        L = R = U = D = LU = LD = RU = RD = UU = RR = DD = LL = 'nothing'
+        uppern = rightn = downn = leftn = False
+        
+        # znalezienie indeksu kafelka do usuniecia (dlatego indeksy musza byc unikatowe przy tworzeniu list)
         for i in objParam.PLACEDPUZZLES:
             if i['x'] == x and i['y'] == y:
                 temp = i['index']
-
-        PuzzleHandler.delElementFromCollumn(self, x)    
-        PuzzleHandler.delElementFromRow(self, y)         
-                
+        
+        # usuwanie obiektu o znalezionym indeksie    
         if temp is not None:        
             objParam.PLACEDPUZZLES[:] = [d for d in objParam.PLACEDPUZZLES if d.get('index') != temp]
         else:
             #komunikat o niedozwolonym ruchu
             pass
 
-
-        L = R = U = D = LU = LD = RU = RD = UU = RR = DD = LL = 'nothing'
-        uppern = rightn = downn = leftn = False
-        
-        ### wydobywanie 12 stanow, ktore trzeba sprawdzic
+        # aktualizacja licznikow zapelnienia    
+        PuzzleHandler.delElementFromCollumn(self, x)    
+        PuzzleHandler.delElementFromRow(self, y)     
+          
+          
+        ### wydobywanie 12 stanow pol, ktore trzeba sprawdzic
         for i in objParam.SQUARES: 
             
             # sasiedzi 2-go stopnia, przekatne    
@@ -86,7 +92,7 @@ class PuzzleHandler(object):
                 D = i['sState']           
 
    
-        ### sprawdzanie stanow
+        ### sprawdzanie stanow pol
    
         # lewy sasiad    
         if L == 'occupied':
@@ -132,7 +138,7 @@ class PuzzleHandler(object):
         ### czy byli sasiedzi wokol usuwanego kafelka
         occupiedNeighbor = ( (leftn or rightn) or (uppern or downn) )
             
-        ### aktualizacja stanow
+        ### aktualizacja stanow pol
         for i in objParam.SQUARES: 
         
             # sasiedzi 1-go stopnia   
@@ -147,17 +153,169 @@ class PuzzleHandler(object):
                 
             # usuwany kafelek            
             if i['x'] == x and i['y'] == y:
+                # jesli mial sasiadow stan zmieniony na 'ready'
                 if occupiedNeighbor:
                     i['sState'] = 'ready'
+                # jesli nie mial sasiadow stan zmieniony na 'unoccupied'    
                 else:    
                     i['sState'] = 'unoccupied'
-                    #print(occupiedNeighbor)            
+          
+        # usuwanie obiektu kosza z PREPAREDPUZZLES     
+        objParam.PREPAREDPUZZLES.pop(0)
+        
+        objParam.DELETEPUZZLE = False        
+ 
+    # usuwanie kolumny lub wiersza
+    def deleteColumnOrRow(self, objParam, columnOrRow, pos):
+
+        deletingColumn = deletingRow = False
+        
+        if columnOrRow == 'x':
+            fixedKey = 'x'
+            fixedValue = pos
+            #changingValue = y
+            deletingRange = self.ROWS + 1
+            deletingColumn = True
+        elif columnOrRow == 'y':
+            fixedKey = 'y'
+            fixedValue = pos
+            #changingValue = x
+            deletingRange = self.COLUMNS + 1  
+            deletingRow = True    
+
+        # znalezienie wszystkich obiektow z podanej kolumny lub wiersza
+        for i in objParam.PLACEDPUZZLES:
+            if deletingColumn:
+                if i['x'] == fixedValue:
+                    x = i['x']
+                    y = i['y']
+                    # aktualizacja licznikow zapelnienia 
+                    PuzzleHandler.delElementFromCollumn(self, x)    
+                    PuzzleHandler.delElementFromRow(self, y)  
+            elif deletingRow:                    
+                if i['y'] == fixedValue:
+                    x = i['x']
+                    y = i['y']
+                    # aktualizacja licznikow zapelnienia 
+                    PuzzleHandler.delElementFromCollumn(self, x)    
+                    PuzzleHandler.delElementFromRow(self, y)                     
+
+        # usuwanie obiektow o znalezionej kolumnie lub wierszu          
+        objParam.PLACEDPUZZLES[:] = [d for d in objParam.PLACEDPUZZLES if d.get(fixedKey) != fixedValue]
+
+        # aktualizacja stanow pol dla kazdego y w zakresie istniejacych rzedow (dla podanego x)
+        for changingValue in range(1, deletingRange):
+        
+            if deletingColumn:
+                x = fixedValue
+                y = changingValue
+            elif deletingRow:          
+                x = changingValue
+                y = fixedValue        
+        
+            L = R = U = D = LU = LD = RU = RD = UU = RR = DD = LL = 'nothing'
+            uppern = rightn = downn = leftn = False
+            
+            ### wydobywanie 12 stanow, ktore trzeba sprawdzic
+            for i in objParam.SQUARES: 
+                
+                # sasiedzi 2-go stopnia, przekatne    
+                if i['x'] == x - 1 and i['y'] == y - 1:
+                    LU = i['sState']
+                if i['x'] == x - 1 and i['y'] == y + 1:
+                    LD = i['sState']
+                if i['x'] == x + 1 and i['y'] == y - 1:
+                    RU = i['sState']
+                if i['x'] == x + 1 and i['y'] == y + 1:
+                    RD = i['sState']
+                
+                # sasiedzi 2-go stopnia, prostopalde i rownolegle             
+                if i['x'] == x and i['y'] == y - 2:
+                    UU = i['sState']
+                if i['x'] == x + 2 and i['y'] == y:
+                    RR = i['sState']
+                if i['x'] == x and i['y'] == y + 2:
+                    DD = i['sState']
+                if i['x'] == x - 2 and i['y'] == y:
+                    LL = i['sState']    
+                   
+                # sasiedzi 1-go stopnia   
+                if i['x'] == x - 1 and i['y'] == y:               
+                    L = i['sState']
+                if i['x'] == x + 1 and i['y'] == y:
+                    R = i['sState']
+                if i['x'] == x and i['y'] == y - 1:
+                    U = i['sState'] 
+                if i['x'] == x and i['y'] == y + 1:
+                    D = i['sState']           
+
+            ### sprawdzanie stanow
+       
+            # lewy sasiad    
+            if L == 'occupied':
+                leftn = True
+            elif L == 'unoccupied':
+                leftn = False                    
+            elif L == 'ready':
+                leftn = False
+                if ( LU != 'occupied' and LD != 'occupied' and LL != 'occupied' ):
+                    L = 'unoccupied'  
+
+            # prawy sasiad            
+            if R == 'occupied':
+                rightn = True
+            elif R == 'unoccupied':
+                rightn = False                    
+            elif R == 'ready':
+                rightn = False
+                if ( RU != 'occupied' and RD != 'occupied' and RR != 'occupied' ):
+                    R = 'unoccupied'  
+        
+            # gorny sasiad        
+            if U == 'occupied':
+                uppern = True
+            elif U == 'unoccupied':
+                uppern = False                    
+            elif U == 'ready':
+                uppern = False
+                if ( LU != 'occupied' and RU != 'occupied' and UU != 'occupied' ):
+                    U = 'unoccupied'  
+
+            # dolny sasiad    
+            if D == 'occupied':
+                downn = True
+            elif D == 'unoccupied':
+                downn = False    
+            elif D == 'ready': 
+                downn = False
+                if ( LD != 'occupied' and RD != 'occupied' and DD != 'occupied' ):
+                    D = 'unoccupied'              
 
             
-        objParam.PREPAREDPUZZLES.pop(0)
-        objParam.DELETEPUZZLE = False        
-        
-    def skipPuzzle(self, objParam, objState): 
+            ### czy byli sasiedzi wokol usuwanego kafelka
+            occupiedNeighbor = ( (leftn or rightn) or (uppern or downn) )
+                
+            ### aktualizacja stanow
+            for i in objParam.SQUARES: 
+            
+                # sasiedzi 1-go stopnia   
+                if i['x'] == x - 1 and i['y'] == y:               
+                    i['sState'] = L
+                if i['x'] == x + 1 and i['y'] == y:
+                    i['sState'] = R
+                if i['x'] == x and i['y'] == y - 1:
+                    i['sState'] = U 
+                if i['x'] == x and i['y'] == y + 1:
+                    i['sState'] = D 
+                    
+                # usuwany kafelek            
+                if i['x'] == x and i['y'] == y:
+                    if occupiedNeighbor:
+                        i['sState'] = 'ready'
+                    else:    
+                        i['sState'] = 'unoccupied'          
+
+    def skipPuzzle(self, objParam, objState, mode): 
     
         # jesli byla mozliwosc polozenia kafelka, przekazanie mozliwych pozycji dalej (usuwanie kafelka z listy tez dalej)
         if not PuzzleHandler.wasItNecessary(self, objParam):
@@ -165,20 +323,24 @@ class PuzzleHandler(object):
             objState.setCredit(temp - 3)
             objParam.SHOWPOSSIBILITIES = True
             startShow = time.time()
-            return startShow
+            objParam.SHOWLOSS = True
+            return (startShow, 3)
             
-        # jesli nie bylo mozliwosci, usuwanie z listy juz teraz
+        # jesli nie bylo mozliwosci, usuwanie z listy oczekujacych juz teraz
         movingPuzzle = objParam.PREPAREDPUZZLES.pop(0)
         
-        if movingPuzzle['tour'] != -19 and movingPuzzle['tour'] != -10:
-            movingPuzzle['tour'] += 1  
-            objParam.PREPAREDPUZZLES.append(movingPuzzle) 
-        elif movingPuzzle['tour'] == -10: 
-            objParam.DELETEPUZZLE = False
-            #print(objParam.DELETEPUZZLE)    
-            
-        #objParam.PREPAREDPUZZLES.append(movingPuzzle)      
-
+        if mode == 'Classic':
+            if movingPuzzle['tour'] != -19 and movingPuzzle['tour'] != -10:
+                movingPuzzle['tour'] += 1  
+                objParam.PREPAREDPUZZLES.append(movingPuzzle) 
+            elif movingPuzzle['tour'] == -10: 
+                objParam.DELETEPUZZLE = False
+        elif mode == 'Continuous':
+            if objParam.PREPAREDPUZZLES[0]['tour'] != -19:
+                objParam.REST -= 1
+            if movingPuzzle['tour'] == -10: 
+                objParam.DELETEPUZZLE = False                
+                
     def wasItNecessary(self, objParam):
         # sprawdzenie czy omijanie bylo nieuniknione - True gdy brak mozliwosci polozenia kafelka, albo kosz
         
@@ -244,7 +406,7 @@ class PuzzleHandler(object):
         else:
             return True
         
-    def isMovePossible(self, objParam, objScore, puzzle):
+    def isMovePossible(self, objParam, objScore, puzzle, objState):
         # sprawdzenie czy ruch jt mozliwy, jesli tak obliczane sa tez punkty za polozenie kafelka
         L = R = U = D = True 
         left = right = up = down = 0
@@ -258,7 +420,8 @@ class PuzzleHandler(object):
         colorL = objParam.PREPAREDPUZZLES[0]['colorL']
         
         premiumScore = PuzzleHandler.anyCollumnsRows(self, posX, posY)
-
+        BONUS = premiumScore 
+        
         for i in objParam.PLACEDPUZZLES:   
             if ( i['x'] == posX - 1 and i['y'] == posY ):
                 if ( colorL == 'neutral' ):
@@ -315,10 +478,38 @@ class PuzzleHandler(object):
                 if premiumScore != 0:
                     premiumScore -= self.POINT4
                 objScore.SCORE += (self.POINT4 + premiumScore)             
-            return True
+            return (True, BONUS)
         else:
-            return False
-         
+            lossTime = time.time()
+            objParam.SHOWLOSS = (True, 1, lossTime)
+            temp = objState.getCredit()
+            objState.setCredit(temp - 1)
+            return (False, 0)
+     
+    def deleteIfNeeded(self, objParam, posX, posY, bonus):
+        # na podstawie bonusa odtwarzane co jt pelne - kolumna, rzad lub oba  
+            
+        if bonus == self.BONUS1:   # usun kolumne
+            for i in objParam.PLACEDPUZZLES:
+                if i['x'] == posX:
+                    #PuzzleHandler.deleteCollumn(self, objParam, posX)
+                    PuzzleHandler.deleteColumnOrRow(self, objParam, 'x', posX)
+
+        elif bonus == self.BONUS2: # usun wiersz
+            for i in objParam.PLACEDPUZZLES:
+                if i['y'] == posY:
+                    #PuzzleHandler.deleteRow(self, objParam, posY)  
+                    PuzzleHandler.deleteColumnOrRow(self, objParam, 'y', posY)
+                    
+        elif bonus == self.BONUS3: # usun kolumne i wiersz
+            for i in objParam.PLACEDPUZZLES:
+                if i['x'] == posX:
+                    #PuzzleHandler.deleteCollumn(self, objParam, posX)
+                    PuzzleHandler.deleteColumnOrRow(self, objParam, 'x', posX)
+                if i['y'] == posY:
+                    #PuzzleHandler.deleteRow(self, objParam, posY)  
+                    PuzzleHandler.deleteColumnOrRow(self, objParam, 'y', posY)                    
+
     def anyCollumnsRows(self, posX, posY):
         hits = 0
         
@@ -339,7 +530,11 @@ class PuzzleHandler(object):
     def isCollumnFull(self, posX):
         temp = self.COLFILL.pop(posX - 1)    
         self.COLFILL.insert((posX - 1), temp + 1)    
-    
+        
+        ###
+        #print('Kolumna ' + str(posX) + ' , zapelnienie: ' + str(temp))
+        ###
+
         if self.COLFILL[posX - 1] == self.ROWS:
             return True
         else:
@@ -348,7 +543,11 @@ class PuzzleHandler(object):
     def isRowFull(self, posY):
         temp = self.ROWFILL.pop(posY - 1)    
         self.ROWFILL.insert((posY - 1), temp + 1)      
-
+ 
+        ###
+        #print('Rzad ' + str(posY) + ' , zapelnienie: ' + str(temp))
+        ###
+ 
         if self.ROWFILL[posY - 1] == self.COLUMNS:
             return True
         else:
@@ -362,8 +561,9 @@ class PuzzleHandler(object):
         temp = self.ROWFILL.pop(posY - 1)    
         self.ROWFILL.insert((posY - 1), temp - 1)      
                
-        
-            
+    def clearFill(self):    
+        self.ROWFILL[:] = []
+        self.COLFILL[:] = []     
             
            
     def debugShowPossible(self, objParam):

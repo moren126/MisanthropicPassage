@@ -1,7 +1,9 @@
 import pygame, time
 
+from os import path
 from states import GameStates
 from colors import*
+from dataStorage import getHighScore
 
 class Scoring(object):
 
@@ -10,9 +12,11 @@ class Scoring(object):
         self.FIRSTTIMEENTRANCE = True
         self.TIMEBEFORE = 0
         self.SCORE = 0
-
-    def setScoring(self, mode):
+        
+        self.endOfPuzzles = False
+        self.endOfCredits = False
     
+    def setScoring(self, mode):
         #jesli kumulacja wyniku to nie zerowac SCORE
         if mode == 'noCumulation':
             self.CURRENTTIME = time.time()
@@ -24,29 +28,40 @@ class Scoring(object):
             self.FIRSTTIMEENTRANCE = True
             self.TIMEBEFORE = 0        
         
-    def scoringDisplay(self, objParam, objState):
+        self.endOfPuzzles = False
+        self.endOfCredits = False
 
-        global delay
-        endOfPuzzles = endOfCredits = False
-         
+    def scoringDisplay(self, objParam, objState, gameMode):
+
+        global delay, record
+
+        sizeH = objParam.FONTSIZE
+        sizeW = int((200 * objParam.WIDTH) / 1900)
+        dist1 = int((35 * objParam.WIDTH) / 1900)
+        dist2 = int((15 * objParam.WIDTH) / 1900)        
         punctDistance = objParam.BOARDWITH / 5
         punctX = objParam.BOARDX
         punctY = objParam.BOARDY / 2
         credit = objState.getCredit()
-        left = objParam.REST
         score = self.SCORE
+                
+        if gameMode == 'Classic':
+            left = objParam.REST   
+        elif gameMode == 'Continuous':
+            left = '--'
         
-        if left == 0:
-            endOfPuzzles = True
+        if objParam.REST == 0:
+            self.endOfPuzzles = True
         if credit <= 0:
-            endOfCredits = True
+            self.endOfCredits = True
             credit = 0
         
         if self.FIRSTTIMEENTRANCE:
             delay = objParam.STARTTIME - self.CURRENTTIME
+            record = getHighScore(objState)
             self.FIRSTTIMEENTRANCE = False
 
-        if not objParam.WIN and not objParam.GAMEOVER:    
+        if not objParam.ENDGAME:    
             elapsedTime = objParam.STARTTIME - self.CURRENTTIME - delay - objParam.PAUSEDTIME  
             self.TIMEBEFORE = elapsedTime
         else:    
@@ -54,14 +69,17 @@ class Scoring(object):
         
         timez = time.strftime('%H:%M:%S', time.gmtime(elapsedTime))
         
-        Scoring.caption(objParam, 'Credits', 30, punctX, punctY, 200, 30, credit) 
-        Scoring.caption(objParam, 'Rest', 30, punctX + punctDistance + 35, punctY, 200, 30, left)     
-        Scoring.caption(objParam, 'Time', 30, punctX + 2 * punctDistance, punctY, 200, 30, timez)
-        Scoring.caption(objParam, 'Record', 30, punctX + 3 * punctDistance + 70, punctY, 200, 30, 'dupa')        
-        Scoring.caption(objParam, 'Score', 30, punctX + 4 * punctDistance + 90, punctY, 200, 30, score)     
+        Scoring.caption(objParam, 'Credits', sizeH, punctX, punctY, sizeW, sizeH, credit) 
+        Scoring.caption(objParam, 'Rest', sizeH, punctX + punctDistance + dist1, punctY, sizeW, sizeH, left)     
+        Scoring.caption(objParam, 'Time', sizeH, punctX + 2 * punctDistance, punctY, sizeW, sizeH, timez)
+        Scoring.caption(objParam, 'Record', sizeH, punctX + 3 * punctDistance + 2*dist1, punctY, sizeW, sizeH, record)        
+        Scoring.caption(objParam, 'Score', sizeH, punctX + 4 * punctDistance + 2*dist1 + dist2, punctY, sizeW, sizeH, score)   
 
-        return (endOfPuzzles, endOfCredits)
+        return (score, timez)    
 
+    def endOfPlay(self):
+        return (self.endOfPuzzles, self.endOfCredits)
+    
     def caption(objParam, msg, fontSize, x, y, w, h, variable):
 
         text = msg + ':' + str(variable) 
