@@ -1,6 +1,6 @@
 # Passive-aggressive Passage
 
-![alt text](screenshots/pap_01.png "Main menu")
+![alt text](screenshots/pap_02.png "Some play2")
 
 Zasady na podstawie gry 'Passage 3' produkcji GEKKO Software GmbH:
 
@@ -20,8 +20,11 @@ Zasady na podstawie gry 'Passage 3' produkcji GEKKO Software GmbH:
 
 Projekt wykonany z wykorzystaniem Pythona 3.4 oraz PyGame 1.9.2a0 dla Pythona 3.4 w celu nauki tych technologii.
 
+![alt text](screenshots/pap_03.png "Some play3")
+
 #
 Katalog z plikami wykonywalnymi dostępny tutaj: 
+
 https://my.pcloud.com/publink/show?code=XZvdsQ7ZjQT0py0Fe2SvXQO6QfVLFHotNIYX
 
 Instrukcja: wypakuj plik zip i uruchom main.exe 
