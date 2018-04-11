@@ -28,3 +28,30 @@ Katalog z plikami wykonywalnymi dostępny tutaj:
 https://my.pcloud.com/publink/show?code=XZvdsQ7ZjQT0py0Fe2SvXQO6QfVLFHotNIYX
 
 Instrukcja: wypakuj plik zip i uruchom main.exe 
+
+
+#
+Rules based on the 'Passage 3' game from GEKKO Software GmbH:
+
+- on the right side of the screen you can see the next tile for placing
+- tiles are placed by clicking the left mouse button
+- tiles can be placed only next to other tiles previously placed on the board
+- adjacent tiles must match the color or pattern
+- any tile can be placed next to the dark gray tile
+- if there is no option for placing tile, you can skip it by right-clicking
+- a tile with the recycle bin icon means you can remove any of the tiles previously located
+- a bad move or omission of a tile that could be put in place results in a loss of credit
+- placing a full row or column adds a point bonus
+- 2 game modes are available: 'Classic' and 'Continuous' and 3 levels of difficulty: 'Easy', 'Medium' and 'Hard'
+- in 'Classic' mode, the game ends after 72 tiles have been placed on the board, after completing the full row or column, the tiles DO NOT disappear
+- in 'Continuous' mode, the tiles are infinite, after laying a full row or column, the tiles disappear
+- difficulty levels differ in the number of available credits, 40, 30 and 20 respectively for 'Easy', 'Medium' and 'Hard'
+
+Project made using Python 3.4 and PyGame 1.9.2a0 for Python 3.4  in order to learn about these technologies.
+
+
+Catalog with executable files available here:
+
+https://my.pcloud.com/publink/show?code=XZvdsQ7ZjQT0py0Fe2SvXQO6QfVLFHotNIYX
+
+Instructions: extract the zip file and run main.exe
